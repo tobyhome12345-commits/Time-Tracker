@@ -108,18 +108,21 @@ function Sprouts({ stage, droop }: { stage: Stage; droop: number }) {
   }
 }
 
+/** Sunglasses. `perched` = pushed up on Pip's head (used when his eyes are closed or sad). */
+function Shades({ perched = false }: { perched?: boolean }) {
+  return (
+    <g className="pip-shades" transform={perched ? 'translate(100 104) scale(0.86) translate(-100 -136)' : undefined}>
+      <rect x={64} y={126} width={30} height={20} rx={8} fill={INK} />
+      <rect x={106} y={126} width={30} height={20} rx={8} fill={INK} />
+      <path d="M94,132 Q100,128 106,132" stroke={INK} strokeWidth={4} fill="none" />
+      <path d="M70,131 L78,131" stroke="#fff" strokeWidth={3} strokeLinecap="round" opacity={0.7} />
+      <path d="M112,131 L120,131" stroke="#fff" strokeWidth={3} strokeLinecap="round" opacity={0.7} />
+    </g>
+  );
+}
+
 function Eyes({ mood, shades }: { mood: Mood; shades: boolean }) {
-  if (shades) {
-    return (
-      <g>
-        <rect x={64} y={126} width={30} height={20} rx={8} fill={INK} />
-        <rect x={106} y={126} width={30} height={20} rx={8} fill={INK} />
-        <path d="M94,132 Q100,128 106,132" stroke={INK} strokeWidth={4} fill="none" />
-        <path d="M70,131 L78,131" stroke="#fff" strokeWidth={3} strokeLinecap="round" opacity={0.7} />
-        <path d="M112,131 L120,131" stroke="#fff" strokeWidth={3} strokeLinecap="round" opacity={0.7} />
-      </g>
-    );
-  }
+  if (shades) return <Shades />;
   if (mood === 'sleepy' || mood === 'rest') {
     return (
       <g stroke={INK} strokeWidth={4} strokeLinecap="round" fill="none">
@@ -197,7 +200,12 @@ function Sparkle({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
 
 export function Pip({ stage, mood, size = 160, animated = true, locked = false, title, holiday = false }: Props) {
   const droop = mood === 'droopy' ? 32 : 0;
-  const shades = (stage === 'tree' || holiday) && mood !== 'sleepy' && mood !== 'rest' && mood !== 'droopy';
+  // Holidays (and the Mighty Tree) always wear sunnies: over the eyes when Pip is awake,
+  // pushed up on his head when he's sleepy, resting or droopy so you can still see his face.
+  const wearsShades = stage === 'tree' || holiday;
+  const eyesClosedOrSad = mood === 'sleepy' || mood === 'rest' || mood === 'droopy';
+  const shades = wearsShades && !eyesClosedOrSad;
+  const perchedShades = wearsShades && eyesClosedOrSad;
   const armsUp = mood === 'cheer';
   return (
     <svg
@@ -243,6 +251,7 @@ export function Pip({ stage, mood, size = 160, animated = true, locked = false, 
             <ellipse cx={65} cy={153} rx={9.5} ry={6} fill={BLUSH} opacity={0.6} />
             <ellipse cx={135} cy={153} rx={9.5} ry={6} fill={BLUSH} opacity={0.6} />
             <Eyes mood={mood} shades={shades} />
+            {perchedShades && <Shades perched />}
             <Mouth mood={mood} />
           </>
         )}

@@ -19,6 +19,9 @@ const MOODS: { id: Mood; name: string; when: string }[] = [
   { id: 'rest', name: 'Resting', when: 'Rest day' },
 ];
 
+/** Extra cell in the evolution sheet showing the holiday look. */
+const HOLIDAY_LOOK = { id: 'holiday' as const, name: 'Holiday', when: 'Every holiday day 😎' };
+
 export function PipScreen() {
   const data = useAppData();
   const derived = useDerived();
@@ -118,7 +121,7 @@ export function PipScreen() {
         <BadgeCase results={derived.badges} unlocked={data.badges} />
       </div>
 
-      {evo && <EvolutionSheet level={level.level} stage={level.stage} onClose={() => setEvo(false)} />}
+      {evo && <EvolutionSheet level={level.level} stage={level.stage} holiday={holiday} onClose={() => setEvo(false)} />}
       {history && <XpHistorySheet rows={ledger.rows} onClose={() => setHistory(false)} />}
       {rules && <XpRulesSheet onClose={() => setRules(false)} />}
     </main>
@@ -164,7 +167,7 @@ function StreakCard({ derived }: { derived: Derived }) {
   );
 }
 
-function EvolutionSheet({ level, stage, onClose }: { level: number; stage: string; onClose: () => void }) {
+function EvolutionSheet({ level, stage, holiday, onClose }: { level: number; stage: string; holiday: boolean; onClose: () => void }) {
   return (
     <Sheet title="Pip’s evolution" onClose={onClose}>
       <p className="muted evo-intro">
@@ -175,7 +178,7 @@ function EvolutionSheet({ level, stage, onClose }: { level: number; stage: strin
           const unlocked = level >= s.from;
           return (
             <div key={s.id} className={`evo-cell${s.id === stage ? ' is-current' : ''}`}>
-              <Pip stage={s.id} mood={unlocked ? 'happy' : 'sleepy'} size={84} animated={s.id === stage} locked={!unlocked} title={`${s.name}${unlocked ? '' : ' (locked)'}`} />
+              <Pip stage={s.id} mood={unlocked ? 'happy' : 'sleepy'} size={84} animated={s.id === stage} locked={!unlocked} holiday={holiday && unlocked} title={`${s.name}${unlocked ? '' : ' (locked)'}`} />
               <span className="evo-name">{unlocked ? s.name : '???'}</span>
               <span className="evo-lv">Lv {s.from}</span>
             </div>
@@ -186,16 +189,16 @@ function EvolutionSheet({ level, stage, onClose }: { level: number; stage: strin
         Pip’s moods
       </h3>
       <div className="mood-grid">
-        {MOODS.map((m) => (
+        {[...MOODS, HOLIDAY_LOOK].map((m) => (
           <div key={m.id} className="mood-cell">
-            <Pip stage={stage as never} mood={m.id} size={70} animated={false} />
+            <Pip stage={stage as never} mood={m.id === 'holiday' ? 'happy' : m.id} size={70} animated={false} holiday={holiday || m.id === 'holiday'} />
             <span className="evo-name">{m.name}</span>
             <span className="mood-when">{m.when}</span>
           </div>
         ))}
       </div>
       <p className="settings-note" style={{ textAlign: 'center' }}>
-        On holidays Pip wears sunglasses at every stage 😎
+        {holiday ? 'It’s a holiday, so Pip has his sunnies on 😎' : 'On holidays Pip wears sunglasses at every stage 😎'}
       </p>
     </Sheet>
   );
