@@ -8,6 +8,7 @@ import { STAGES } from './logic/progress';
 import { showToast } from './components/toast';
 import { celebrate } from './native/platform';
 import { PipScreen } from './screens/PipScreen';
+import { onNotificationTap, resyncAll } from './native/notify';
 import { SettingsScreen } from './screens/Settings';
 import { applyTheme, onSystemThemeChange } from './theme';
 import { TodayScreen } from './screens/Today';
@@ -56,6 +57,15 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress]);
 
+  // Notifications: re-sync on launch, open Today when one is tapped.
+  useEffect(() => {
+    void resyncAll();
+    return onNotificationTap(() => {
+      setDayTs(startOfDay(Date.now()));
+      setTab('today');
+    });
+  }, []);
+
   // Save immediately when the app goes to the background.
   useEffect(() => {
     const onHide = () => document.visibilityState === 'hidden' && void flush();
@@ -77,6 +87,7 @@ export function App() {
     });
     const pause = CapApp.addListener('pause', () => void flush());
     const resume = CapApp.addListener('resume', () => {
+      void resyncAll();
       const prevToday = todayRef.current;
       setDayTs((d) => (d === prevToday ? startOfDay(Date.now()) : d));
     });

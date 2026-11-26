@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Bell, Download, Minus, Monitor, Moon, Palette, Plus, Sun, Trash2, Upload } from 'lucide-react';
 import { getState, importData, resetAll, updateSettings, useAppData } from '../data/store';
 import type { Settings, ThemePref } from '../data/types';
@@ -7,8 +7,8 @@ import { Sheet } from '../components/Sheet';
 import { showToast } from '../components/toast';
 import { ACCENTS, contrast } from '../theme';
 import { fmtDur } from '../logic/time';
-import { tap } from '../native/platform';
-import { ensurePermission, sendTest, syncReminders } from '../native/notify';
+import { isNative, tap } from '../native/platform';
+import { ensurePermission, exactStatus, requestExact, sendTest, syncReminders } from '../native/notify';
 
 export function SettingsScreen() {
   const { settings, entries } = useAppData();
@@ -16,6 +16,10 @@ export function SettingsScreen() {
   const [pendingImport, setPendingImport] = useState<ParsedBackup | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [exact, setExact] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (isNative) void exactStatus().then(setExact);
+  }, []);
 
   const set = (patch: Partial<Settings>) => {
     updateSettings(patch);
@@ -109,6 +113,19 @@ export function SettingsScreen() {
             >
               <Bell size={18} /> Send a test notification
             </button>
+          )}
+          {isNative && settings.dailyReminder.on && exact === false && (
+            <Row icon="⏰" title="Exact timing" sub="Optional: let reminders arrive on the exact minute">
+              <button
+                className="btn btn-soft exact-btn"
+                onClick={() => {
+                  tap();
+                  void requestExact().then(setExact);
+                }}
+              >
+                Allow
+              </button>
+            </Row>
           )}
           <p className="settings-note">No nudges between 9pm and 8am. Reminders are scheduled by Android, so they work even when the app is closed.</p>
         </section>
