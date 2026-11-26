@@ -100,6 +100,7 @@ export function App() {
 
   return (
     <div className="app">
+      <div className="statusbar-scrim" aria-hidden />
       {tab === 'today' && <TodayScreen dayTs={dayTs} setDayTs={setDayTs} onOpenPip={() => setTab('pip')} />}
       {tab === 'pip' && <PipScreen />}
       {tab === 'stats' && (

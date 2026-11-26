@@ -612,3 +612,15 @@ textarea.input {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Keeps scrolled content from showing under the (transparent, edge-to-edge) status bar icons. */
+.statusbar-scrim {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--safe-top);
+  background: var(--bg);
+  z-index: 30;
+  pointer-events: none;
+}
