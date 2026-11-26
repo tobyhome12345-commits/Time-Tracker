@@ -2316,6 +2316,13 @@
   fill: var(--miss);
 }
 
+.dc-bar-today {
+  fill: color-mix(in oklab, var(--outside) 45%, var(--surface));
+  stroke: var(--outside);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+}
+
 .dc-target {
   stroke: var(--text);
   stroke-width: 2.5;
@@ -2453,11 +2460,28 @@
   margin-top: 2px;
 }
 
-.cal-hol {
+.cal-day.is-holiday::before,
+.cal-legend-hol i {
+  content: '';
   position: absolute;
-  top: 1px;
-  right: 2px;
-  font-size: 9px;
+  top: 4px;
+  left: 28%;
+  right: 28%;
+  height: 3px;
+  border-radius: 2px;
+  background: #38bdf8;
+}
+
+.cal-legend-hol {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cal-legend-hol i {
+  position: static;
+  display: inline-block;
+  width: 14px;
 }
 
 .cal-legend {

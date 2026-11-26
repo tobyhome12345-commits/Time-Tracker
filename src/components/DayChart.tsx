@@ -82,7 +82,7 @@ export function DayChart({ days, selected, onSelect, ariaLabel }: Props) {
           const markW = Math.min(slot - 8, barW + 14);
           return (
             <g key={d.key} className={d.future ? 'dc-future' : undefined}>
-              <path d={col(cx - barW / 2, base, barW, base - y(d.minutes))} className={d.hit ? 'dc-bar-hit' : 'dc-bar-miss'} />
+              <path d={col(cx - barW / 2, base, barW, base - y(d.minutes))} className={d.hit ? 'dc-bar-hit' : d.isToday ? 'dc-bar-today' : 'dc-bar-miss'} />
               {!d.rest && <line x1={cx - markW / 2} x2={cx + markW / 2} y1={y(d.target)} y2={y(d.target)} className="dc-target" />}
               {d.hit && (
                 <text x={cx} y={y(Math.max(d.minutes, d.target)) - 6} textAnchor="middle" className="dc-check">

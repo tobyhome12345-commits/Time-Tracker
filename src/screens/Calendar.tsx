@@ -32,7 +32,7 @@ export function MonthCalendar({ days, selected, onSelect }: { days: DayStat[]; s
             <button
               key={d.key}
               role="gridcell"
-              className={`cal-day lvl-${lvl}${d.hit ? ' is-hit' : ''}${d.isToday ? ' is-today' : ''}${d.key === selected ? ' is-selected' : ''}${d.future ? ' is-future' : ''}`}
+              className={`cal-day lvl-${lvl}${d.hit ? ' is-hit' : ''}${d.isToday ? ' is-today' : ''}${d.key === selected ? ' is-selected' : ''}${d.future ? ' is-future' : ''}${d.type === 'holiday' ? ' is-holiday' : ''}`}
               disabled={d.future}
               aria-label={`${new Date(d.ts).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}: ${fmtDur(d.minutes)} outside of ${fmtDur(d.target)}${d.hit ? ', target hit' : ''}${d.rest ? ', rest day' : ''}${d.type === 'holiday' ? ', holiday' : ''}`}
               aria-pressed={d.key === selected}
@@ -42,11 +42,6 @@ export function MonthCalendar({ days, selected, onSelect }: { days: DayStat[]; s
               <span className="cal-mark" aria-hidden>
                 {d.rest ? '😴' : d.hit ? '✓' : ''}
               </span>
-              {d.type === 'holiday' && (
-                <span className="cal-hol" aria-hidden>
-                  🏖️
-                </span>
-              )}
             </button>
           );
         })}
@@ -58,7 +53,9 @@ export function MonthCalendar({ days, selected, onSelect }: { days: DayStat[]; s
         ))}
         <span>More</span>
         <span className="cal-legend-sep">✓ target hit</span>
-        <span>🏖️ holiday</span>
+        <span className="cal-legend-hol">
+          <i aria-hidden /> holiday
+        </span>
       </div>
     </div>
   );
