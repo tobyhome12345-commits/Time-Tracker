@@ -1,6 +1,6 @@
 import { useAppData } from '../data/store';
 import type { AppData } from '../data/types';
-import { evaluateBadges } from './progress';
+import { evaluateFamilies, type FamilyResult } from './badges';
 import { challengeWins, currentChallenge, type WeekChallenge } from './challenges';
 import { dailyTotals, dayKey } from './time';
 import { buildLedger, type ChallengeWin, type Ledger } from './xp';
@@ -11,7 +11,7 @@ export interface Derived {
   wins: ChallengeWin[];
   challenge: WeekChallenge;
   totalMinutes: number;
-  badges: ReturnType<typeof evaluateBadges>;
+  badges: FamilyResult[];
 }
 
 /* Memoised derived data shared by every screen (recomputed only when data or the day changes). */
@@ -33,7 +33,7 @@ export function derive(data: AppData, now = Date.now()): Derived {
     wins,
     challenge: currentChallenge(data, map, now),
     totalMinutes,
-    badges: evaluateBadges({ entries: data.entries, ledger, totalMinutes, wins, maxLevel }),
+    badges: evaluateFamilies({ entries: data.entries, ledger, map, totalMinutes, wins, maxLevel }),
   };
   cache = { data, day, hour, derived };
   return derived;

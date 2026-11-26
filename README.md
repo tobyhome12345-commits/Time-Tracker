@@ -52,7 +52,7 @@ XP never goes below 0. Levels (and Pip's stage, Seed → Mighty Tree 😎) go **
 - **🏖️ Holiday mode:** add holiday periods (name + dates) and every day in them gets the holiday target.
 - **🏆 Weekend challenges:** a new one each week, and only weekends and holiday days count. No pressure on school days.
 - **📊 Stats:** a week chart with target markers and XP, a 📅 month calendar, and insights (hit rate, school days vs weekends, best day and week, longest outing, top activities).
-- **20 badges:** Perfect Week, Holiday Hero, Comeback Kid, Challenge Champ and more.
+- **🏅 Upgradeable badges:** 18 badges that level up through 🥉 Bronze → 🥈 Silver → 🥇 Gold → 💠 Platinum → 💎 Diamond → 👑 Legend (108 medals). Example: Streak Master asks for 3 days in a row, then 7, 14, 30, 60 and 100.
 - **Settings:** targets, holidays, light / dark / system theme, an accent colour, and JSON backup export and import.
 - **No notifications, no accounts, no ads**, 100% offline.
 

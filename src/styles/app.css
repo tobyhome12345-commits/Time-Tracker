@@ -2512,3 +2512,382 @@
   gap: 12px;
   margin-top: 12px;
 }
+
+/* ───── Tiered badges ───── */
+
+.trophy-case {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trophy-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.trophy-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.trophy-cell b {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.trophy-cell small {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--text-2);
+}
+
+.trophy-cell.is-empty {
+  opacity: 0.45;
+}
+
+.medal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  font-size: 28px;
+  flex: none;
+  isolation: isolate;
+}
+
+.medal > span {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+}
+
+.medal-sm {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+}
+
+.medal-lg {
+  width: 84px;
+  height: 84px;
+  font-size: 42px;
+}
+
+.medal.t-0 {
+  background: var(--surface-2);
+}
+
+.medal.t-0 > span {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.medal.t-1 {
+  background: radial-gradient(circle at 35% 30%, #ffe2c6, #d8925a 55%, #8a4b1f);
+  box-shadow: 0 3px 10px rgba(160, 82, 30, 0.35);
+}
+
+.medal.t-2 {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #c9d1d9 55%, #7c8794);
+  box-shadow: 0 3px 10px rgba(90, 100, 115, 0.35);
+}
+
+.medal.t-3 {
+  background: radial-gradient(circle at 35% 30%, #fff7cc, #fcd34d 55%, #d08a00);
+  box-shadow: 0 3px 12px rgba(245, 158, 11, 0.45);
+}
+
+.medal.t-4 {
+  background: radial-gradient(circle at 35% 30%, #f0fdff, #8ee6e6 55%, #2a9d9d);
+  box-shadow: 0 3px 12px rgba(42, 157, 157, 0.45);
+}
+
+.medal.t-5 {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #b7c2fd 45%, #6366f1);
+  box-shadow: 0 3px 14px rgba(99, 102, 241, 0.5);
+  overflow: hidden;
+}
+
+.medal.t-5::after {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.75) 50%, transparent 60%);
+  animation: medal-shine 2.8s ease-in-out infinite;
+}
+
+.medal.t-6 {
+  background: radial-gradient(circle at 35% 30%, #fffbe6, #fde68a 55%, #f59e0b);
+  box-shadow: 0 3px 16px rgba(236, 72, 153, 0.45);
+}
+
+.medal.t-6::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: 50%;
+  background: conic-gradient(#ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #6366f1, #d946ef, #ef4444);
+  animation: medal-spin 4s linear infinite;
+}
+
+@keyframes medal-shine {
+  0%,
+  55% {
+    transform: translateX(-60%);
+  }
+  100% {
+    transform: translateX(60%);
+  }
+}
+
+@keyframes medal-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tier-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.tier-chip.t-0 {
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.tier-chip.t-1 {
+  background: #e8ac78;
+  color: #3b1d06;
+}
+
+.tier-chip.t-2 {
+  background: #d5dbe1;
+  color: #1f2933;
+}
+
+.tier-chip.t-3 {
+  background: #fcd34d;
+  color: #3d2a00;
+}
+
+.tier-chip.t-4 {
+  background: #9be8e8;
+  color: #053b3b;
+}
+
+.tier-chip.t-5 {
+  background: #b7c2fd;
+  color: #1e1b4b;
+}
+
+.tier-chip.t-6 {
+  background: linear-gradient(90deg, #fde68a, #f9c4e0, #a5f3fc);
+  color: #2a1a3a;
+}
+
+.pips {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.pips i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--surface-3);
+}
+
+.pips i.t-1 {
+  background: #d8925a;
+}
+
+.pips i.t-2 {
+  background: #aab4bf;
+}
+
+.pips i.t-3 {
+  background: #f5b301;
+}
+
+.pips i.t-4 {
+  background: #2fb3b3;
+}
+
+.pips i.t-5 {
+  background: #6366f1;
+}
+
+.pips i.t-6 {
+  background: conic-gradient(#ef4444, #eab308, #22c55e, #06b6d4, #d946ef, #ef4444);
+}
+
+.badge-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.bcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px 12px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  min-width: 0;
+  transition: transform 0.12s;
+}
+
+.bcard:active {
+  transform: scale(0.97);
+}
+
+.bcard-name {
+  font-weight: 900;
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.bcard:not(.is-earned) .bcard-name {
+  color: var(--text-2);
+}
+
+.bcard-next {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.bcard-next-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-2);
+}
+
+.bcard-bar {
+  height: 7px;
+}
+
+.bcard-bar > span {
+  --bar: var(--accent);
+}
+
+.bcard-count {
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--text-3);
+}
+
+.bcard-max {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.bsheet-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 4px 0 14px;
+}
+
+.bsheet-tier {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.bsheet-val {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+
+.tier-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tier-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-radius: 14px;
+}
+
+.tier-row + .tier-row {
+  border-top: 1px solid var(--border);
+}
+
+.tier-row.is-next {
+  background: var(--accent-soft);
+  border-top-color: transparent;
+  padding: 10px;
+}
+
+.tier-row:not(.is-got):not(.is-next) {
+  opacity: 0.7;
+}
+
+.tier-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tier-name {
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.tier-goal {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.tier-prog {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.tier-prog .progress {
+  flex: 1;
+}
+
+.tier-status {
+  font-size: 13px;
+  font-weight: 850;
+  color: var(--good-ink);
+  white-space: nowrap;
+}

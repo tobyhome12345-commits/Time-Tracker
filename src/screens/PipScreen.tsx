@@ -8,6 +8,7 @@ import { useDerived, type Derived } from '../logic/useProgress';
 import { tap } from '../native/platform';
 import { ChallengeCard } from './ChallengeCard';
 import { XpHistoryList, XpHistorySheet, XpRulesSheet } from './XpHistory';
+import { BadgeCase } from './BadgeCase';
 
 const MOODS: { id: Mood; name: string; when: string }[] = [
   { id: 'sleepy', name: 'Sleepy', when: 'Nothing logged yet today' },
@@ -30,7 +31,6 @@ export function PipScreen() {
   const { level } = ledger;
   const stage = STAGES.find((s) => s.id === level.stage)!;
   const next = STAGES.find((s) => s.from > level.level);
-  const earned = derived.badges.filter((b) => b.earned || data.badges[b.def.id]).length;
   const holiday = row.info.type === 'holiday';
 
   return (
@@ -114,15 +114,8 @@ export function PipScreen() {
           <XpHistoryList rows={ledger.rows.slice(-7).reverse()} />
         </section>
 
-        <div className="spread" style={{ margin: '10px 4px 0' }}>
-          <h2 className="section-title" style={{ margin: 0 }}>
-            Badges
-          </h2>
-          <span className="badge-count tnum">
-            {earned} / {derived.badges.length}
-          </span>
-        </div>
-        <Badges derived={derived} unlocked={data.badges} />
+        <h2 className="section-title">Badges</h2>
+        <BadgeCase results={derived.badges} unlocked={data.badges} />
       </div>
 
       {evo && <EvolutionSheet level={level.level} stage={level.stage} onClose={() => setEvo(false)} />}
@@ -168,33 +161,6 @@ function StreakCard({ derived }: { derived: Derived }) {
         ))}
       </div>
     </section>
-  );
-}
-
-function Badges({ derived, unlocked }: { derived: Derived; unlocked: Record<string, number> }) {
-  return (
-    <div className="badge-grid">
-      {derived.badges.map(({ def, result, earned }) => {
-        const got = earned || !!unlocked[def.id];
-        const prog = Array.isArray(result) && !got ? result : null;
-        return (
-          <div key={def.id} className={`badge${got ? ' is-earned' : ''}`} aria-label={`${def.name}: ${got ? 'unlocked' : def.hint}`}>
-            <span className="badge-medal" aria-hidden>
-              {def.emoji}
-            </span>
-            <span className="badge-name">{def.name}</span>
-            <span className="badge-hint">
-              {got && unlocked[def.id] ? new Date(unlocked[def.id]).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : def.hint}
-            </span>
-            {prog && (
-              <span className="badge-prog" aria-hidden>
-                <span style={{ width: `${(prog[0] / prog[1]) * 100}%` }} />
-              </span>
-            )}
-          </div>
-        );
-      })}
-    </div>
   );
 }
 

@@ -5,6 +5,7 @@ import { Toaster } from './components/toast';
 import { flush, isLoaded, unlockBadges, useAppData } from './data/store';
 import { useDerived } from './logic/useProgress';
 import { STAGES } from './logic/progress';
+import { earnedKeys, FAMILIES, TIERS } from './logic/badges';
 import { showToast } from './components/toast';
 import { celebrate } from './native/platform';
 import { PipScreen } from './screens/PipScreen';
@@ -52,10 +53,15 @@ export function App() {
       msgs.push(`🥺 Pip dropped to level ${lvl}. Win it back outside!`);
     }
     prev.current = cur;
-    const fresh = badges.filter((b) => b.earned && !data.badges[b.def.id]);
+    const fresh = earnedKeys(badges).filter((k) => !data.badges[k]);
     if (fresh.length) {
-      unlockBadges(fresh.map((b) => b.def.id));
-      msgs.push(fresh.length === 1 ? `🏅 Badge unlocked: ${fresh[0].def.name}` : `🏅 ${fresh.length} new badges unlocked!`);
+      unlockBadges(fresh);
+      if (fresh.length === 1) {
+        const [id, t] = fresh[0].split(':');
+        const fam = FAMILIES.find((f) => f.id === id)!;
+        const tier = TIERS[Number(t) - 1];
+        msgs.push(`${tier.emoji} ${tier.name}! ${fam.name}: ${fam.goal(fam.thresholds[tier.n - 1])}`);
+      } else msgs.push(`🏅 ${fresh.length} badge upgrades!`);
     }
     if (msgs.length) {
       if (!msgs[0].startsWith('🥺')) celebrate();
