@@ -124,10 +124,10 @@ button {
   bottom: 0;
   z-index: 20;
   padding: 6px 12px calc(6px + var(--safe-bottom));
-  background: color-mix(in oklab, var(--surface) 88%, transparent);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  /* Solid: some Android WebViews don't blur, and see-through content behind the tabs looks messy. */
+  background: var(--surface);
   border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .tabbar-inner {
