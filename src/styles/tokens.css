@@ -16,6 +16,9 @@
   /* Data series (validated: CVD ΔE 28.9, normal ΔE 36.3, ≥3:1 on surface) */
   --outside: #16a34a;
   --inside: #7355ea;
+  /* Solid fills that carry white text (≥ 4.5:1 in both themes) */
+  --outside-solid: #15803d;
+  --inside-solid: #6a4ce2;
 
   /* Accent is overwritten at runtime from Settings */
   --accent: #16a34a;

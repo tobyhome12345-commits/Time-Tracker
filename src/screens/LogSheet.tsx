@@ -51,6 +51,7 @@ export function LogSheet({ kind: initialKind, entry, dayTs, onClose }: LogSheetP
   const timerRunning = !!getState().timer;
 
   const color = kind === 'outside' ? 'var(--outside)' : 'var(--inside)';
+  const solid = kind === 'outside' ? 'var(--outside-solid)' : 'var(--inside-solid)';
   const chipStyle = {
     ['--chip-on' as string]: color,
     ['--chip-on-bg' as string]: kind === 'outside' ? 'var(--outside-soft)' : 'var(--inside-soft)',
@@ -116,7 +117,7 @@ export function LogSheet({ kind: initialKind, entry, dayTs, onClose }: LogSheetP
               <Play size={18} /> Timer
             </button>
           )}
-          <button className="btn btn-primary btn-block log-save" style={{ background: color, color: '#fff' }} onClick={save} disabled={!canSave}>
+          <button className="btn btn-primary btn-block log-save" style={{ background: solid, color: '#fff' }} onClick={save} disabled={!canSave}>
             {editing ? 'Save changes' : minutes ? `Log ${fmtDur(minutes)} ${kind}` : 'Pick a time'}
           </button>
         </>

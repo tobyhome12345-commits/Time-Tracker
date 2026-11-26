@@ -8,6 +8,7 @@ import { STAGES } from './logic/progress';
 import { showToast } from './components/toast';
 import { celebrate } from './native/platform';
 import { PipScreen } from './screens/PipScreen';
+import { SettingsScreen } from './screens/Settings';
 import { applyTheme, onSystemThemeChange } from './theme';
 import { TodayScreen } from './screens/Today';
 import { TimerPill } from './screens/TimerCard';
@@ -98,14 +99,7 @@ export function App() {
           }}
         />
       )}
-      {tab === 'settings' && (
-        <main className="screen">
-          <div className="screen-head">
-            <h1 className="screen-title">{tab[0].toUpperCase() + tab.slice(1)}</h1>
-          </div>
-          <div className="card empty">Coming soon 🌱</div>
-        </main>
-      )}
+      {tab === 'settings' && <SettingsScreen />}
       {tab !== 'today' && <TimerPill onOpen={() => setTab('today')} />}
       <Toaster />
       <TabBar
