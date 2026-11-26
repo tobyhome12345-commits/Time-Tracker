@@ -1,6 +1,6 @@
 # 🌱 Touch Grass
 
-Track your **inside (screen) time vs outside time**, with charts, streaks, badges, reminders and **Pip the sprout**, a little buddy who grows the more you get outside.
+Get outside, win XP, grow **Pip the sprout** 🌱. Touch Grass tracks your **outdoor time**. Beat your daily target and Pip levels up; miss it and you lose XP (and Pip can shrink!).
 
 Works 100% offline. Everything is saved on your phone.
 
@@ -24,22 +24,37 @@ Every change pushed to this repo builds a new version automatically. To update, 
 
 ### ✅ First-run checklist
 
-- [ ] Log a quick **Outside 15m** and check the ring and goal bar move.
-- [ ] *Settings → Reminders*: switch on **Daily reminder**, tap **Allow** when Android asks, then tap **Send a test notification**. You should see "Hi from Pip!" within a few seconds.
-- [ ] Start an **Outside timer**, close the app, reopen it: the timer is still running, and there's a "timer running" notification.
+- [ ] Log a quick **15m** and watch the ring move toward today's target.
+- [ ] Start the **outside timer**, close the app, reopen it: the timer is still running.
+- [ ] *Settings → Holiday mode*: add your next school holiday.
 - [ ] *Settings → Your data → Export* to save a backup (to Drive, Files, etc.).
-- [ ] Later, after an update: check your logs are still there.
+- [ ] After an update: check your logs are still there.
 
 ## ✨ Features
 
-- **Quick logging:** Inside / Outside buttons, presets (15m, 30m, 1h, 2h), custom hours + minutes, categories (gaming, YouTube, schoolwork, TV / scooting, sport, walking, hanging out), notes, and logging for past days. Edit or delete anything, with Undo.
-- **Live timer:** start and stop; it saves the log for you and survives closing the app.
-- **Today:** a big outside-vs-inside ring, totals, goal + limit progress bars, and the day's logs.
-- **Stats:** week and month charts, outside %, change vs the previous period, and Insights (best day, daily averages, top activities, most outdoorsy weekday, time of day).
-- **Pip:** 6 growth stages (Seed → Mighty Tree 😎) and 5 moods that react to your balance. XP = outside minutes + a bonus for goal days.
-- **Streaks and badges:** "outside wins" and "goal hit" streaks, plus 16 milestone badges.
-- **Reminders:** an optional daily reminder, and fresh-air nudges after too long inside. Android schedules them itself (they work with the app closed), with quiet hours 9pm–8am.
-- **Settings:** light / dark / system theme, an accent colour picker, and JSON backup export + import.
+**🎯 Daily targets:** 📚 school days **1h**, 🎉 weekends **2h**, 🏖️ holidays **2h every day** (all adjustable).
+
+**⭐ XP you can win and lose**
+| | XP |
+|---|---|
+| Hit your target | **+25** |
+| Every extra minute (up to 4h) | **+1** |
+| Streak bonus | **+5 per streak day** (max +25) |
+| Weekend challenge complete | **+50** |
+| Miss your target | **−1 per minute short** (applied at midnight) |
+| 😴 Rest day (1 per week) | ±0, streak safe |
+
+XP never goes below 0. Levels (and Pip's stage, Seed → Mighty Tree 😎) go **up and down**.
+
+- **Today:** a day-type chip, a progress ring toward today's target, live XP (earned, or "−20 XP at risk tonight"), quick logging (15m, 30m, 1h, 2h or custom, with 8 activities, notes and past days), and an outside timer.
+- **Pip:** 6 growth stages and 6 moods (sleepy, happy, cheering, worried after 5pm, droopy after losing XP, resting), plus holiday sunglasses.
+- **📜 XP history:** every day's +/− XP and why, weekly totals, and level-up/down markers.
+- **🏖️ Holiday mode:** add holiday periods (name + dates) and every day in them gets the holiday target.
+- **🏆 Weekend challenges:** a new one each week, and only weekends and holiday days count. No pressure on school days.
+- **📊 Stats:** a week chart with target markers and XP, a 📅 month calendar, and insights (hit rate, school days vs weekends, best day and week, longest outing, top activities).
+- **20 badges:** Perfect Week, Holiday Hero, Comeback Kid, Challenge Champ and more.
+- **Settings:** targets, holidays, light / dark / system theme, an accent colour, and JSON backup export and import.
+- **No notifications, no accounts, no ads**, 100% offline.
 
 ## 🛠 How it's built
 
@@ -48,13 +63,12 @@ Every change pushed to this repo builds a new version automatically. To update, 
 | App | React 19 + TypeScript + Vite, hand-made SVG charts and mascot |
 | Android | Capacitor 8 (`com.touchgrass.tracker`), edge-to-edge |
 | Storage | One JSON blob in Android SharedPreferences (`@capacitor/preferences`) |
-| Notifications | `@capacitor/local-notifications` (Android AlarmManager) |
 | CI/CD | `.github/workflows/android.yml`: test → build → sign → GitHub Release, on **every push** |
 
 ```bash
 npm install
 npm run dev          # run in a browser
-npm test             # unit tests (time maths, stats, streaks, badges, backup, notification rules)
+npm test             # unit tests (XP rules, day types, challenges, streaks, badges, stats, migration, backup)
 npm run build        # type-check + production web build
 npx cap sync android # copy the web build into the Android project
 ```
