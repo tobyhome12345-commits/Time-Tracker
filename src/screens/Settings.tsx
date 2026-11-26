@@ -236,6 +236,7 @@ export function SettingsScreen() {
               className="btn btn-primary btn-block"
               onClick={() => {
                 importData(pendingImport.data, 'merge');
+                void syncReminders(getState().settings);
                 showToast({ msg: 'Backup merged ✓' });
                 setPendingImport(null);
               }}
@@ -246,6 +247,7 @@ export function SettingsScreen() {
               className="btn btn-danger btn-block"
               onClick={() => {
                 importData(pendingImport.data, 'replace');
+                void syncReminders(getState().settings);
                 showToast({ msg: 'Backup restored ✓' });
                 setPendingImport(null);
               }}

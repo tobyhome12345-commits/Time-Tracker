@@ -10,7 +10,8 @@ on:
 permissions:
   contents: write
 
-# Builds run one after another (never cancelled), so the newest push always ends up as "latest".
+# Builds run one at a time and are never cut off mid-way, so the newest push always ends up as "latest".
+# (If several pushes queue up while a build is running, GitHub skips to the newest one.)
 concurrency:
   group: android-release
   cancel-in-progress: false
