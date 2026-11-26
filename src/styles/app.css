@@ -397,3 +397,173 @@
   color: var(--text-3) !important;
   opacity: 1;
 }
+
+/* ───── Timer ───── */
+
+.timer-idle {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.timer-idle-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.timer-idle-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  font-size: 22px;
+  flex: none;
+}
+
+.timer-idle-sub {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.timer-start {
+  border: 2px solid var(--k);
+  color: var(--text);
+  background: color-mix(in oklab, var(--k) 10%, var(--surface));
+}
+
+.timer-start svg {
+  color: var(--k);
+}
+
+.timer-start-inside {
+  --k: var(--inside);
+}
+
+.timer-start-outside {
+  --k: var(--outside);
+}
+
+.timer-running {
+  --k: var(--outside);
+  background: linear-gradient(160deg, color-mix(in oklab, var(--k) 20%, var(--surface)), var(--surface) 70%);
+  border: 2px solid color-mix(in oklab, var(--k) 55%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timer-running-inside {
+  --k: var(--inside);
+}
+
+.timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 850;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.timer-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--danger);
+  display: inline-block;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+}
+
+.timer-x {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: var(--text-2);
+}
+
+.timer-clock {
+  font-size: 64px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-top: 12px;
+  text-align: center;
+}
+
+.timer-since {
+  text-align: center;
+  margin: 4px 0 10px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.timer-warn {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--danger) 12%, var(--surface));
+  color: var(--danger);
+  font-weight: 750;
+  font-size: 14px;
+}
+
+.timer-cats {
+  justify-content: center;
+  margin-bottom: 14px;
+  --chip-on: var(--k);
+  --chip-on-bg: color-mix(in oklab, var(--k) 16%, var(--surface));
+}
+
+.timer-cats .chip {
+  background: var(--surface);
+}
+
+.timer-stop {
+  background: var(--k);
+  color: #fff;
+  min-height: 56px;
+  font-size: 18px;
+}
+
+.timer-pill {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 12px);
+  z-index: 25;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--k);
+  color: #fff;
+  font-weight: 850;
+  font-size: 16px;
+  box-shadow: var(--shadow);
+  --k: var(--outside);
+}
+
+.timer-pill-inside {
+  --k: var(--inside);
+}
+
+.timer-pill .timer-dot {
+  background: #fff;
+}

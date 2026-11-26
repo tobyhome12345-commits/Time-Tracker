@@ -61,6 +61,7 @@ export function TodayScreen({ dayTs, setDayTs, hero }: Props) {
       </div>
 
       <div className="stack">
+        {isToday && data.timer && <TimerCard onEdit={(e) => setSheet({ kind: e.kind, entry: e })} />}
         <section className="card hero-card" aria-label="Inside vs outside">
           <div className="hero-ring">
             <Ring outside={totals.outside} inside={totals.inside} />
@@ -118,7 +119,7 @@ export function TodayScreen({ dayTs, setDayTs, hero }: Props) {
           ))}
         </div>
 
-        {isToday && <TimerCard />}
+        {isToday && !data.timer && <TimerCard onEdit={(e) => setSheet({ kind: e.kind, entry: e })} />}
 
         <h2 className="section-title">{isToday ? 'Today’s logs' : 'Logs'}</h2>
         {list.length === 0 ? (

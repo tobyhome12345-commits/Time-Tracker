@@ -5,6 +5,7 @@ import { Toaster } from './components/toast';
 import { flush, useAppData } from './data/store';
 import { applyTheme, onSystemThemeChange } from './theme';
 import { TodayScreen } from './screens/Today';
+import { TimerPill } from './screens/TimerCard';
 import { runBack } from './native/back';
 import { isNative } from './native/platform';
 import { startOfDay } from './logic/time';
@@ -66,6 +67,7 @@ export function App() {
           <div className="card empty">Coming soon 🌱</div>
         </main>
       )}
+      {tab !== 'today' && <TimerPill onOpen={() => setTab('today')} />}
       <Toaster />
       <TabBar
         tab={tab}
