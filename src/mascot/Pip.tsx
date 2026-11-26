@@ -7,6 +7,8 @@ interface Props {
   animated?: boolean;
   /** Greyed-out silhouette for locked stages */
   locked?: boolean;
+  /** Holiday look: sunglasses on any stage */
+  holiday?: boolean;
   title?: string;
 }
 
@@ -118,7 +120,7 @@ function Eyes({ mood, shades }: { mood: Mood; shades: boolean }) {
       </g>
     );
   }
-  if (mood === 'sleepy') {
+  if (mood === 'sleepy' || mood === 'rest') {
     return (
       <g stroke={INK} strokeWidth={4} strokeLinecap="round" fill="none">
         <path d="M71,136 Q79,142 87,136" />
@@ -142,10 +144,13 @@ function Eyes({ mood, shades }: { mood: Mood; shades: boolean }) {
           <path d="M114,121 L130,126" />
         </g>
       )}
-      {mood === 'unsure' && (
-        <g stroke={INK} strokeWidth={3.5} strokeLinecap="round">
-          <path d="M71,121 L87,121" />
-          <path d="M113,119 L129,123" />
+      {mood === 'worried' && (
+        <g>
+          <g stroke={INK} strokeWidth={3.5} strokeLinecap="round">
+            <path d="M70,125 L86,119" />
+            <path d="M114,119 L130,125" />
+          </g>
+          <path d="M146,104 C152,114 154,120 149,124 C144,128 138,122 141,115 Z" fill="#7cc4fa" />
         </g>
       )}
       {mood === 'cheer' && (
@@ -169,8 +174,9 @@ function Mouth({ mood }: { mood: Mood }) {
           <ellipse cx={100} cy={160} rx={6} ry={3.5} fill="#ff7a93" />
         </g>
       );
-    case 'unsure':
-      return <path d="M89,155 q5.5,-5 11,0 t11,0" stroke={INK} strokeWidth={4} strokeLinecap="round" fill="none" />;
+    case 'worried':
+      return <path d="M89,156 q5.5,-5 11,0 t11,0" stroke={INK} strokeWidth={4} strokeLinecap="round" fill="none" />;
+    case 'rest':
     case 'sleepy':
       return <ellipse cx={100} cy={155} rx={4} ry={5} fill={INK} />;
     case 'droopy':
@@ -189,9 +195,9 @@ function Sparkle({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
   );
 }
 
-export function Pip({ stage, mood, size = 160, animated = true, locked = false, title }: Props) {
+export function Pip({ stage, mood, size = 160, animated = true, locked = false, title, holiday = false }: Props) {
   const droop = mood === 'droopy' ? 32 : 0;
-  const shades = stage === 'tree' && mood !== 'sleepy' && mood !== 'droopy';
+  const shades = (stage === 'tree' || holiday) && mood !== 'sleepy' && mood !== 'rest' && mood !== 'droopy';
   const armsUp = mood === 'cheer';
   return (
     <svg
@@ -249,7 +255,7 @@ export function Pip({ stage, mood, size = 160, animated = true, locked = false, 
           <Sparkle x={178} y={170} s={0.7} />
         </g>
       )}
-      {mood === 'sleepy' && !locked && (
+      {(mood === 'sleepy' || mood === 'rest') && !locked && (
         <g className="pip-zzz" fill="var(--text-2)" fontWeight={900} fontFamily="var(--font)">
           <text x={150} y={100} fontSize={18}>
             z

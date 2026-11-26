@@ -1,16 +1,19 @@
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Timer as TimerIcon } from 'lucide-react';
-import { useAppData } from '../data/store';
-import type { Entry, Kind } from '../data/types';
-import { findCategory, KIND_EMOJI, KIND_LABEL } from '../data/categories';
+import { setRestDay, useAppData } from '../data/store';
+import type { Entry } from '../data/types';
+import { findCategory, OUTSIDE_EMOJI } from '../data/categories';
 import { Ring } from '../components/Ring';
-import { GoalBar } from '../components/Progress';
-import { addDays, dayKey, entriesOnDay, fmtDayLong, fmtDur, fmtTime, MIN, relativeDayName, startOfDay, totalsFor } from '../logic/time';
-import { LogSheet } from './LogSheet';
-import { TimerCard } from './TimerCard';
-import { tap } from '../native/platform';
+import { Sheet } from '../components/Sheet';
+import { showToast } from '../components/toast';
+import { addDays, dayKey, entriesOnDay, fmtDayLong, fmtDur, fmtTime, MIN, relativeDayName, startOfDay } from '../logic/time';
+import { DAY_TYPE_EMOJI, DAY_TYPE_LABEL, dayInfo, restDaysUsedInWeek, type DayInfo, type LedgerRow } from '../logic/xp';
 import { useDerived } from '../logic/useProgress';
+import { LogSheet } from './LogSheet';
+import { TimerCard, useNow } from './TimerCard';
 import { PipCard } from './PipCard';
+import { ChallengeCard } from './ChallengeCard';
+import { tap } from '../native/platform';
 
 interface Props {
   dayTs: number;
@@ -20,21 +23,24 @@ interface Props {
 
 export function TodayScreen({ dayTs, setDayTs, onOpenPip }: Props) {
   const data = useAppData();
-  const { settings } = data;
-  const [sheet, setSheet] = useState<{ kind: Kind; entry?: Entry } | null>(null);
+  const { map, ledger, challenge } = useDerived();
+  const [sheet, setSheet] = useState<{ entry?: Entry } | null>(null);
+  const [restSheet, setRestSheet] = useState(false);
   const today = startOfDay(Date.now());
   const isToday = dayTs === today;
+  const key = dayKey(dayTs);
+  const row = ledger.rows.find((r) => r.info.key === key);
+  const info: DayInfo = row?.info ?? dayInfo(data, key);
+  const saved = Math.round(map.get(key) ?? 0);
 
-  const { map, progress } = useDerived();
-  const totals = totalsFor(map, dayKey(dayTs));
+  // Live minutes include a running timer (today only)
+  const now = useNow(isToday && !!data.timer, 15_000);
+  const timerMins = isToday && data.timer ? Math.max(0, Math.floor((now - data.timer.startedAt) / 60000)) : 0;
+  const minutes = saved + timerMins;
+
   const list = useMemo(() => entriesOnDay(data.entries, dayTs).slice().reverse(), [data.entries, dayTs]);
-
-  const diff = totals.outside - totals.inside;
-  let verdict: string;
-  if (!totals.inside && !totals.outside) verdict = isToday ? 'Nothing logged yet today. Let’s go! 🌱' : 'Nothing logged on this day.';
-  else if (diff > 0) verdict = `Outside is winning by ${fmtDur(diff)}! 🌞`;
-  else if (diff === 0) verdict = 'Perfectly balanced ⚖️';
-  else verdict = `Inside is ahead by ${fmtDur(-diff)}.${isToday ? ' Fresh air time? 🌳' : ''}`;
+  const restUsed = restDaysUsedInWeek(data.restDays, key).length > 0;
+  const canRest = !!row && !info.rest && !row.hit && !restUsed;
 
   const go = (n: number) => {
     tap();
@@ -64,97 +70,176 @@ export function TodayScreen({ dayTs, setDayTs, onOpenPip }: Props) {
       </div>
 
       <div className="stack">
-        {isToday && data.timer && <TimerCard onEdit={(e) => setSheet({ kind: e.kind, entry: e })} />}
-        <PipCard totals={totals} settings={settings} stage={progress.level.stage} level={progress.level.level} isToday={isToday} onOpen={onOpenPip} />
-        <section className="card hero-card" aria-label="Inside vs outside">
+        <DayChip info={info} />
+        {isToday && data.timer && <TimerCard onEdit={(e) => setSheet({ entry: e })} todayMinutes={saved} target={info.target} rest={info.rest} />}
+        {row && <PipCard ledger={ledger} row={row} level={ledger.level.level} stage={ledger.level.stage} onOpen={onOpenPip} />}
+
+        <section className="card hero-card" aria-label="Outside time">
           <div className="hero-ring">
-            <Ring outside={totals.outside} inside={totals.inside} />
+            <Ring minutes={minutes} target={info.target} rest={info.rest} />
           </div>
-          <div className="hero-side">
-            <div className="legend-row">
-              <span className="legend-dot" style={{ background: 'var(--outside)' }} />
-              <div>
-                <div className="legend-label">Outside</div>
-                <div className="legend-val tnum">{fmtDur(totals.outside)}</div>
-              </div>
-            </div>
-            <div className="legend-row">
-              <span className="legend-dot" style={{ background: 'var(--inside)' }} />
-              <div>
-                <div className="legend-label">Inside</div>
-                <div className="legend-val tnum">{fmtDur(totals.inside)}</div>
-              </div>
-            </div>
-          </div>
-          <p className="hero-verdict">{verdict}</p>
+          <XpStatus row={row} minutes={minutes} timerMins={timerMins} atRisk={isToday ? ledger.atRisk : 0} />
         </section>
 
-        <section className="card goals-card" aria-label="Goals">
-          <GoalBar label="Outside goal" icon="🌳" value={totals.outside} target={settings.outsideGoalMin} color="var(--outside)" mode="goal" />
-          {settings.insideLimitMin !== null && (
-            <GoalBar label="Inside limit" icon="📱" value={totals.inside} target={settings.insideLimitMin} color="var(--inside)" mode="limit" />
-          )}
-        </section>
+        <button
+          className="log-btn log-btn-outside log-btn-wide"
+          onClick={() => {
+            tap();
+            setSheet({});
+          }}
+        >
+          <span className="log-btn-emoji" aria-hidden>
+            {OUTSIDE_EMOJI}
+          </span>
+          <span className="log-btn-text">
+            <span className="log-btn-kicker">{isToday ? 'Been outside?' : 'Forgot to log?'}</span>
+            Log outside time
+          </span>
+          <span className="log-btn-plus">
+            <Plus size={22} strokeWidth={3} />
+          </span>
+        </button>
 
-        <div className="grid-2">
-          {(['inside', 'outside'] as Kind[]).map((k) => (
-            <button
-              key={k}
-              className={`log-btn log-btn-${k}`}
-              onClick={() => {
-                tap();
-                setSheet({ kind: k });
-              }}
-            >
-              <span className="log-btn-top">
-                <span className="log-btn-emoji" aria-hidden>
-                  {KIND_EMOJI[k]}
-                </span>
-                <span className="log-btn-plus">
-                  <Plus size={20} strokeWidth={3} />
-                </span>
-              </span>
-              <span>
-                <span className="log-btn-kicker">Log</span>
-                {KIND_LABEL[k]}
-              </span>
-            </button>
-          ))}
-        </div>
+        {isToday && !data.timer && <TimerCard onEdit={(e) => setSheet({ entry: e })} todayMinutes={saved} target={info.target} rest={info.rest} />}
 
-        {isToday && !data.timer && <TimerCard onEdit={(e) => setSheet({ kind: e.kind, entry: e })} />}
+        {isToday && <ChallengeCard challenge={challenge} />}
 
-        <h2 className="section-title">{isToday ? 'Today’s logs' : 'Logs'}</h2>
+        <h2 className="section-title">{isToday ? 'Today’s outdoor time' : 'Outdoor time'}</h2>
         {list.length === 0 ? (
-          <div className="card empty">
-            {isToday ? 'Your logs will show up here. Tap Inside or Outside to add one!' : 'No logs. Forgot to log? Tap Inside or Outside above to add one for this day.'}
-          </div>
+          <div className="card empty">{isToday ? 'Nothing yet. Tap “Log outside time” or start the timer! 🌳' : 'Nothing logged. Forgot? Tap “Log outside time” to add it for this day.'}</div>
         ) : (
           <ul className="card entry-list" aria-label="Logs">
             {list.map((e) => (
-              <EntryRow key={e.id} e={e} onClick={() => setSheet({ kind: e.kind, entry: e })} />
+              <EntryRow key={e.id} e={e} onClick={() => setSheet({ entry: e })} />
             ))}
           </ul>
         )}
+
+        {row && (info.rest || canRest) && (
+          <button
+            className="rest-link"
+            onClick={() => {
+              tap();
+              if (info.rest) {
+                setRestDay(key, false);
+                showToast({ msg: 'Rest day removed' });
+              } else setRestSheet(true);
+            }}
+          >
+            {info.rest ? '😴 This is a rest day. Tap to undo' : `🤒 Feeling ill or stuck inside? Use your rest day (1 left this week)`}
+          </button>
+        )}
+        {row && !info.rest && !row.hit && restUsed && <p className="rest-note">Rest day already used this week.</p>}
       </div>
 
-      {sheet && <LogSheet kind={sheet.kind} entry={sheet.entry} dayTs={dayTs} onClose={() => setSheet(null)} />}
+      {sheet && <LogSheet entry={sheet.entry} dayTs={dayTs} onClose={() => setSheet(null)} />}
+      {restSheet && (
+        <Sheet title="Use your rest day?" onClose={() => setRestSheet(false)}>
+          <p className="import-summary">
+            Make <b>{relativeDayName(dayTs).toLowerCase() === 'today' ? 'today' : fmtDayLong(dayTs)}</b> a rest day: you won’t lose any XP and your streak stays safe 💤
+          </p>
+          <p className="settings-note">You get one rest day per week (Monday to Sunday). Use it when you’re ill or really can’t get outside.</p>
+          <div className="stack" style={{ gap: 10, marginTop: 16 }}>
+            <button
+              className="btn btn-primary btn-block"
+              onClick={() => {
+                if (setRestDay(key, true)) showToast({ msg: 'Rest day set. Get well soon! 💤' });
+                setRestSheet(false);
+              }}
+            >
+              😴 Yes, make it a rest day
+            </button>
+            <button className="btn btn-soft btn-block" onClick={() => setRestSheet(false)}>
+              No, I’ll get outside
+            </button>
+          </div>
+        </Sheet>
+      )}
     </main>
   );
 }
 
+function DayChip({ info }: { info: DayInfo }) {
+  if (info.rest) return <div className="day-chip day-chip-rest">😴 Rest day · no target</div>;
+  const name = info.type === 'holiday' ? info.holiday?.name ?? 'Holiday' : DAY_TYPE_LABEL[info.type];
+  return (
+    <div className={`day-chip day-chip-${info.type}`}>
+      <span aria-hidden>{DAY_TYPE_EMOJI[info.type]}</span> {name} · target <b>{fmtDur(info.target)}</b>
+    </div>
+  );
+}
+
+function XpStatus({ row, minutes, timerMins, atRisk }: { row?: LedgerRow; minutes: number; timerMins: number; atRisk: number }) {
+  if (!row) {
+    return (
+      <div className="xp-status">
+        <div className="xp-big muted">No XP</div>
+        <p className="xp-sub">This day is before XP tracking started. It still counts for stats.</p>
+      </div>
+    );
+  }
+  if (row.info.rest) {
+    return (
+      <div className="xp-status">
+        <div className="xp-big">±0 XP</div>
+        <p className="xp-sub">Rest day. No XP lost, streak safe 💤</p>
+      </div>
+    );
+  }
+  if (row.hit) {
+    return (
+      <div className="xp-status">
+        <div className="xp-big xp-gain tnum">+{row.xp} XP</div>
+        <ul className="xp-parts">
+          {row.parts.map((p, i) => (
+            <li key={i}>
+              <span>{p.kind === 'target' ? '🎯 Target' : p.kind === 'extra' ? '⏱️ Extra time' : p.kind === 'streak' ? '🔥 Streak' : '🏆 Challenge'}</span>
+              <b className="tnum">+{p.xp}</b>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+  if (row.pending) {
+    const toGo = Math.max(0, row.info.target - minutes);
+    if (toGo === 0 && timerMins > 0) {
+      return (
+        <div className="xp-status">
+          <div className="xp-big xp-gain">Target reached!</div>
+          <p className="xp-sub">Stop the timer to bank your XP 🎉</p>
+        </div>
+      );
+    }
+    return (
+      <div className="xp-status">
+        <div className="xp-big tnum">{fmtDur(toGo)}</div>
+        <p className="xp-sub">to go</p>
+        {atRisk > 0 && <div className="xp-risk tnum">⚠️ −{Math.min(atRisk, toGo)} XP at risk tonight</div>}
+        <p className="xp-hint">Hit it for +25 XP plus your streak bonus</p>
+      </div>
+    );
+  }
+  return (
+    <div className="xp-status">
+      <div className="xp-big xp-loss tnum">{row.xp} XP</div>
+      <p className="xp-sub">Missed the target by {fmtDur(row.info.target - row.minutes)}</p>
+    </div>
+  );
+}
+
 export function EntryRow({ e, onClick }: { e: Entry; onClick: () => void }) {
-  const cat = findCategory(e.kind, e.category);
+  const cat = findCategory(e.category);
   const end = e.start + e.minutes * MIN;
   return (
     <li>
       <button className="entry-row" onClick={onClick}>
-        <span className={`entry-icon entry-icon-${e.kind}`} aria-hidden>
-          {cat?.emoji ?? KIND_EMOJI[e.kind]}
+        <span className="entry-icon" aria-hidden>
+          {cat?.emoji ?? OUTSIDE_EMOJI}
         </span>
         <span className="entry-main">
           <span className="entry-title">
-            {cat?.label ?? KIND_LABEL[e.kind]}
+            {cat?.label ?? 'Outside'}
             {e.source === 'timer' && <TimerIcon size={14} className="entry-timer" aria-label="from timer" />}
           </span>
           <span className="entry-sub">
@@ -162,7 +247,7 @@ export function EntryRow({ e, onClick }: { e: Entry; onClick: () => void }) {
             {e.note ? ` · ${e.note}` : ''}
           </span>
         </span>
-        <span className={`entry-dur tnum entry-dur-${e.kind}`}>{fmtDur(e.minutes)}</span>
+        <span className="entry-dur tnum">{fmtDur(e.minutes)}</span>
       </button>
     </li>
   );

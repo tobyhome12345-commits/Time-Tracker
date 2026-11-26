@@ -1,8 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import { Preferences } from '@capacitor/preferences';
 import { emptyData } from './types';
-import type { AppData, Entry, Kind, RunningTimer, Settings } from './types';
+import type { AppData, Entry, Holiday, RunningTimer, Settings, Targets } from './types';
 import { normalizeData } from './migrate';
+import { dayKey } from '../logic/time';
+import { restDaysUsedInWeek } from '../logic/xp';
 
 /* A tiny global store: one AppData object, persisted as a single JSON blob on the device
    (Android SharedPreferences via @capacitor/preferences; localStorage in a browser). */
@@ -11,7 +13,7 @@ export const STORAGE_KEY = 'touchgrass.data';
 const BACKUP_KEY = 'touchgrass.data.prev';
 const SAVE_DELAY = 300;
 
-let state: AppData = emptyData();
+let state: AppData = emptyData(dayKey(Date.now()));
 let loaded = false;
 const listeners = new Set<() => void>();
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -106,13 +108,12 @@ export function newId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export type NewEntry = Pick<Entry, 'kind' | 'start' | 'minutes' | 'source'> & Partial<Pick<Entry, 'category' | 'note'>>;
+export type NewEntry = Pick<Entry, 'start' | 'minutes' | 'source'> & Partial<Pick<Entry, 'category' | 'note'>>;
 
 export function addEntry(input: NewEntry): Entry {
   const now = Date.now();
   const entry: Entry = clean({
     id: newId(),
-    kind: input.kind,
     start: input.start,
     minutes: Math.max(1, Math.round(input.minutes)),
     category: input.category,
@@ -147,8 +148,8 @@ export function restoreEntry(entry: Entry) {
   setState((s) => (s.entries.some((e) => e.id === entry.id) ? s : { ...s, entries: insertSorted(s.entries, entry) }));
 }
 
-export function startTimer(kind: Kind, category?: string, startedAt = Date.now()) {
-  const timer: RunningTimer = category ? { kind, startedAt, category } : { kind, startedAt };
+export function startTimer(category?: string, startedAt = Date.now()) {
+  const timer: RunningTimer = category ? { startedAt, category } : { startedAt };
   setState((s) => ({ ...s, timer }));
 }
 
@@ -163,7 +164,7 @@ export function stopTimer(now = Date.now()): Entry | null {
   const minutes = Math.round((now - t.startedAt) / 60000);
   setState((s) => ({ ...s, timer: null }));
   if (minutes < 1) return null;
-  return addEntry({ kind: t.kind, start: t.startedAt, minutes: Math.min(minutes, 24 * 60), source: 'timer', category: t.category });
+  return addEntry({ start: t.startedAt, minutes: Math.min(minutes, 24 * 60), source: 'timer', category: t.category });
 }
 
 export function cancelTimer() {
@@ -172,6 +173,43 @@ export function cancelTimer() {
 
 export function updateSettings(patch: Partial<Settings>) {
   setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
+}
+
+/** New targets apply from today onward; past days keep the targets they had. */
+export function setTargets(patch: Partial<Targets>, today = dayKey(Date.now())) {
+  setState((s) => {
+    const hist = s.targetHistory.slice();
+    const current = hist[hist.length - 1];
+    const next = { ...current, ...patch, from: today };
+    if (current.from >= today) hist[hist.length - 1] = { ...next, from: current.from };
+    else hist.push(next);
+    return { ...s, targetHistory: hist };
+  });
+}
+
+export function saveHoliday(h: Holiday) {
+  setState((s) => {
+    const rest = s.holidays.filter((x) => x.id !== h.id);
+    return { ...s, holidays: [...rest, h].sort((a, b) => (a.start < b.start ? -1 : 1)) };
+  });
+}
+
+export function deleteHoliday(id: string): Holiday | undefined {
+  const h = state.holidays.find((x) => x.id === id);
+  setState((s) => ({ ...s, holidays: s.holidays.filter((x) => x.id !== id) }));
+  return h;
+}
+
+/** Mark/unmark a rest day. Max one per Mon–Sun week: returns false if the week's rest day is used. */
+export function setRestDay(key: string, on: boolean): boolean {
+  if (on && restDaysUsedInWeek(state.restDays, key).length) return false;
+  setState((s) => {
+    const set = new Set(s.restDays);
+    if (on) set.add(key);
+    else set.delete(key);
+    return { ...s, restDays: [...set].sort() };
+  });
+  return true;
 }
 
 export function unlockBadges(ids: string[], at = Date.now()) {
@@ -183,19 +221,30 @@ export function unlockBadges(ids: string[], at = Date.now()) {
   });
 }
 
-/** Replace everything, or merge entries by id (imported wins on conflict). */
+/** Replace everything, or merge by id (imported wins on conflict). */
 export function importData(incoming: AppData, mode: 'merge' | 'replace') {
   setState((s) => {
     if (mode === 'replace') return { ...incoming, timer: s.timer ?? incoming.timer };
     const byId = new Map(s.entries.map((e) => [e.id, e]));
     for (const e of incoming.entries) byId.set(e.id, e);
     const entries = [...byId.values()].sort((a, b) => a.start - b.start);
-    return { ...s, entries, badges: { ...incoming.badges, ...s.badges } };
+    const holidays = new Map(s.holidays.map((h) => [h.id, h]));
+    for (const h of incoming.holidays) holidays.set(h.id, h);
+    return {
+      ...s,
+      entries,
+      holidays: [...holidays.values()].sort((a, b) => (a.start < b.start ? -1 : 1)),
+      restDays: [...new Set([...s.restDays, ...incoming.restDays])].sort(),
+      trackingSince: incoming.trackingSince < s.trackingSince ? incoming.trackingSince : s.trackingSince,
+      badges: { ...incoming.badges, ...s.badges },
+    };
   });
 }
 
+/** Delete all logs and progress (keeps appearance settings, targets and holidays). */
 export function resetAll() {
-  setState(() => ({ ...emptyData(), settings: state.settings }));
+  const today = dayKey(Date.now());
+  setState((s) => ({ ...emptyData(today), settings: s.settings, targetHistory: [{ ...s.targetHistory[s.targetHistory.length - 1], from: today }], holidays: s.holidays }));
 }
 
 function insertSorted(list: Entry[], e: Entry): Entry[] {

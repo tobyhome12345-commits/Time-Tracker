@@ -1,19 +1,23 @@
 import { ChevronRight } from 'lucide-react';
 import { Pip } from '../mascot/Pip';
 import { moodFor, moodLine, type Stage } from '../logic/progress';
-import type { Settings } from '../data/types';
-import type { DayTotals } from '../logic/time';
+import type { Ledger, LedgerRow } from '../logic/xp';
 
 /** Compact Pip + speech bubble shown at the top of Today. */
-export function PipCard(props: { totals: DayTotals; settings: Settings; stage: Stage; level: number; isToday: boolean; onOpen: () => void }) {
-  const mood = moodFor(props.totals, props.settings);
+export function PipCard(props: { ledger: Ledger; row: LedgerRow; stage: Stage; level: number; onOpen: () => void }) {
+  const mood = moodFor(props.ledger, props.row);
   return (
     <button className="card pip-card" onClick={props.onOpen} aria-label={`Pip, level ${props.level}. Open Pip`}>
-      <Pip stage={props.stage} mood={mood} size={78} />
+      <Pip stage={props.stage} mood={mood} size={78} holiday={props.row.info.type === 'holiday'} />
       <span className="pip-card-main">
-        <span className="bubble bubble-left">{props.isToday ? moodLine(mood) : moodLine(mood, 0)}</span>
+        <span className="bubble bubble-left">{moodLine(mood, props.ledger, props.row)}</span>
         <span className="pip-card-meta">
-          <span className="level-chip level-chip-sm">Lv {props.level}</span> Pip
+          <span className="level-chip level-chip-sm">Lv {props.level}</span>
+          {props.ledger.streak.current > 0 ? (
+            <span className="streak-mini">🔥 {props.ledger.streak.current}-day streak</span>
+          ) : (
+            <span>Pip</span>
+          )}
           <ChevronRight size={16} />
         </span>
       </span>

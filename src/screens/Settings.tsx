@@ -1,38 +1,31 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Bell, Download, Minus, Monitor, Moon, Palette, Plus, Sun, Trash2, Upload } from 'lucide-react';
-import { getState, importData, resetAll, updateSettings, useAppData } from '../data/store';
-import type { Settings, ThemePref } from '../data/types';
+import { useRef, useState, type ReactNode } from 'react';
+import { ChevronRight, Download, HelpCircle, Minus, Monitor, Moon, Palette, Plus, Sun, Trash2, Upload } from 'lucide-react';
+import { getState, importData, resetAll, setTargets, updateSettings, useAppData } from '../data/store';
+import type { Holiday, Settings, Targets, ThemePref } from '../data/types';
 import { exportBackup, parseBackup, type ParsedBackup } from '../data/backup';
 import { Sheet } from '../components/Sheet';
 import { showToast } from '../components/toast';
 import { ACCENTS, contrast } from '../theme';
-import { fmtDur } from '../logic/time';
-import { isNative, tap } from '../native/platform';
-import { ensurePermission, exactStatus, requestExact, sendTest, syncReminders } from '../native/notify';
+import { dayKey, DAY_MS, fmtDur, keyToTs } from '../logic/time';
+import { tap } from '../native/platform';
+import { HolidaySheet } from './HolidaySheet';
+import { XpRulesSheet } from './XpHistory';
 
 export function SettingsScreen() {
-  const { settings, entries } = useAppData();
+  const { settings, entries, targetHistory, holidays } = useAppData();
+  const targets = targetHistory[targetHistory.length - 1];
   const [accentSheet, setAccentSheet] = useState(false);
   const [pendingImport, setPendingImport] = useState<ParsedBackup | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [holidaySheet, setHolidaySheet] = useState<Holiday | 'new' | null>(null);
+  const [rules, setRules] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [exact, setExact] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (isNative) void exactStatus().then(setExact);
-  }, []);
+  const today = dayKey(Date.now());
 
-  const set = (patch: Partial<Settings>) => {
-    updateSettings(patch);
-    if ('dailyReminder' in patch || 'insideNudge' in patch) void syncReminders(getState().settings);
-  };
-
-  const toggleReminder = async (key: 'dailyReminder' | 'insideNudge', on: boolean) => {
-    tap();
-    if (on && !(await ensurePermission())) {
-      showToast({ msg: 'Notifications are blocked. Allow them in Android settings 🔔' });
-      return;
-    }
-    set({ [key]: { ...settings[key], on } } as Partial<Settings>);
+  const set = (patch: Partial<Settings>) => updateSettings(patch);
+  const setTarget = (k: keyof Targets, v: number) => {
+    setTargets({ [k]: v });
+    showToast({ msg: 'New target applies from today 👍' });
   };
 
   const onExport = async () => {
@@ -56,6 +49,9 @@ export function SettingsScreen() {
     }
   };
 
+  const upcoming = holidays.filter((h) => h.end >= today);
+  const past = holidays.filter((h) => h.end < today);
+
   return (
     <main className="screen" aria-label="Settings">
       <div className="screen-head">
@@ -63,71 +59,64 @@ export function SettingsScreen() {
       </div>
 
       <div className="stack">
-        <h2 className="section-title">Goals</h2>
+        <h2 className="section-title">Daily targets</h2>
         <section className="card settings-card">
-          <Row icon="🌳" title="Outside goal" sub="Per day">
-            <MiniStepper value={settings.outsideGoalMin} min={15} max={8 * 60} step={15} onChange={(v) => set({ outsideGoalMin: v })} label="outside goal" />
+          <Row icon="📚" title="School days" sub="Monday to Friday">
+            <MiniStepper value={targets.weekday} min={15} max={6 * 60} step={15} onChange={(v) => setTarget('weekday', v)} label="weekday target" />
           </Row>
-          <Row icon="📱" title="Inside limit" sub={settings.insideLimitMin === null ? 'Off' : 'A gentle daily cap'}>
-            <Switch checked={settings.insideLimitMin !== null} onChange={(on) => set({ insideLimitMin: on ? 180 : null })} label="Inside limit" />
+          <Row icon="🎉" title="Weekends" sub="Saturday and Sunday">
+            <MiniStepper value={targets.weekend} min={15} max={8 * 60} step={15} onChange={(v) => setTarget('weekend', v)} label="weekend target" />
           </Row>
-          {settings.insideLimitMin !== null && (
-            <Row icon="" title="Limit" sub="" indent>
-              <MiniStepper value={settings.insideLimitMin} min={15} max={12 * 60} step={15} onChange={(v) => set({ insideLimitMin: v })} label="inside limit" />
-            </Row>
+          <Row icon="🏖️" title="Holidays" sub="Every day of a holiday">
+            <MiniStepper value={targets.holiday} min={15} max={8 * 60} step={15} onChange={(v) => setTarget('holiday', v)} label="holiday target" />
+          </Row>
+          <p className="settings-note">Beat your target to win XP, miss it and you lose XP at midnight. Changes apply from today, so past days keep their old targets.</p>
+          <button
+            className="btn btn-soft btn-block"
+            style={{ marginTop: 10 }}
+            onClick={() => {
+              tap();
+              setRules(true);
+            }}
+          >
+            <HelpCircle size={18} /> How XP works
+          </button>
+        </section>
+
+        <h2 className="section-title">🏖️ Holiday mode</h2>
+        <section className="card settings-card">
+          {upcoming.length === 0 && <p className="settings-note" style={{ marginTop: 6 }}>Add your school holidays and every day becomes a {fmtDur(targets.holiday)} day. Weekend challenges also run all holiday long!</p>}
+          {upcoming.map((h) => (
+            <HolidayRow key={h.id} h={h} today={today} onClick={() => setHolidaySheet(h)} />
+          ))}
+          <button
+            className="btn btn-primary btn-block"
+            style={{ marginTop: 12 }}
+            onClick={() => {
+              tap();
+              setHolidaySheet('new');
+            }}
+          >
+            <Plus size={18} /> Add a holiday
+          </button>
+          {past.length > 0 && (
+            <details className="past-holidays">
+              <summary>Past holidays ({past.length})</summary>
+              {past
+                .slice()
+                .reverse()
+                .map((h) => (
+                  <HolidayRow key={h.id} h={h} today={today} onClick={() => setHolidaySheet(h)} />
+                ))}
+            </details>
           )}
         </section>
 
-        <h2 className="section-title">Reminders</h2>
+        <h2 className="section-title">Rest days</h2>
         <section className="card settings-card">
-          <Row icon="🔔" title="Daily reminder" sub="A nudge to log your day">
-            <Switch checked={settings.dailyReminder.on} onChange={(on) => void toggleReminder('dailyReminder', on)} label="Daily reminder" />
+          <Row icon="😴" title="One rest day per week" sub="Ill or stuck inside? Use it from the Today screen: no XP lost, streak safe.">
+            <span />
           </Row>
-          {settings.dailyReminder.on && (
-            <Row icon="" title="Time" sub="" indent>
-              <input
-                className="input time-input"
-                type="time"
-                value={settings.dailyReminder.time}
-                onChange={(e) => e.target.value && set({ dailyReminder: { ...settings.dailyReminder, time: e.target.value } })}
-                aria-label="Reminder time"
-              />
-            </Row>
-          )}
-          <Row icon="🌤️" title="Fresh-air nudge" sub="If you’ve been inside a while with no outside time">
-            <Switch checked={settings.insideNudge.on} onChange={(on) => void toggleReminder('insideNudge', on)} label="Fresh-air nudge" />
-          </Row>
-          {settings.insideNudge.on && (
-            <Row icon="" title="Nudge after" sub="of inside time" indent>
-              <MiniStepper value={settings.insideNudge.afterMin} min={30} max={4 * 60} step={15} onChange={(v) => set({ insideNudge: { ...settings.insideNudge, afterMin: v } })} label="nudge delay" />
-            </Row>
-          )}
-          {(settings.dailyReminder.on || settings.insideNudge.on) && (
-            <button
-              className="btn btn-soft btn-block"
-              style={{ marginTop: 8 }}
-              onClick={() => {
-                tap();
-                void sendTest();
-              }}
-            >
-              <Bell size={18} /> Send a test notification
-            </button>
-          )}
-          {isNative && settings.dailyReminder.on && exact === false && (
-            <Row icon="⏰" title="Exact timing" sub="Optional: let reminders arrive on the exact minute">
-              <button
-                className="btn btn-soft exact-btn"
-                onClick={() => {
-                  tap();
-                  void requestExact().then(setExact);
-                }}
-              >
-                Allow
-              </button>
-            </Row>
-          )}
-          <p className="settings-note">No nudges between 9pm and 8am. Reminders are scheduled by Android, so they work even when the app is closed.</p>
         </section>
 
         <h2 className="section-title">Appearance</h2>
@@ -223,6 +212,8 @@ export function SettingsScreen() {
         </p>
       </div>
 
+      {holidaySheet && <HolidaySheet holiday={holidaySheet === 'new' ? undefined : holidaySheet} onClose={() => setHolidaySheet(null)} />}
+      {rules && <XpRulesSheet onClose={() => setRules(false)} />}
       {accentSheet && <AccentSheet current={settings.accent} onPick={(c) => set({ accent: c })} onClose={() => setAccentSheet(false)} />}
 
       {pendingImport && (
@@ -236,7 +227,6 @@ export function SettingsScreen() {
               className="btn btn-primary btn-block"
               onClick={() => {
                 importData(pendingImport.data, 'merge');
-                void syncReminders(getState().settings);
                 showToast({ msg: 'Backup merged ✓' });
                 setPendingImport(null);
               }}
@@ -247,21 +237,20 @@ export function SettingsScreen() {
               className="btn btn-danger btn-block"
               onClick={() => {
                 importData(pendingImport.data, 'replace');
-                void syncReminders(getState().settings);
                 showToast({ msg: 'Backup restored ✓' });
                 setPendingImport(null);
               }}
             >
               Replace everything
             </button>
-            <p className="settings-note">Merge keeps your current logs and adds the backup’s. Replace swaps everything (including settings) for the backup.</p>
+            <p className="settings-note">Merge keeps your current logs and adds the backup’s. Replace swaps everything (including targets and holidays) for the backup.</p>
           </div>
         </Sheet>
       )}
 
       {confirmReset && (
         <Sheet title="Delete all logs?" onClose={() => setConfirmReset(false)}>
-          <p className="import-summary">This removes all {entries.length} logs, badges and Pip’s progress. Your settings stay. This can’t be undone, so export a backup first if you might want them back.</p>
+          <p className="import-summary">This removes all {entries.length} logs, XP, badges and Pip’s progress. Your targets, holidays and colours stay. This can’t be undone, so export a backup first if you might want them back.</p>
           <div className="stack" style={{ gap: 10, marginTop: 14 }}>
             <button className="btn btn-soft btn-block" onClick={() => void onExport()}>
               <Download size={18} /> Export a backup first
@@ -283,6 +272,30 @@ export function SettingsScreen() {
   );
 }
 
+function HolidayRow({ h, today, onClick }: { h: Holiday; today: string; onClick: () => void }) {
+  const days = Math.round((keyToTs(h.end) - keyToTs(h.start)) / DAY_MS) + 1;
+  const fmt = (k: string) => new Date(keyToTs(k)).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const onNow = h.start <= today && today <= h.end;
+  const startsIn = Math.round((keyToTs(h.start) - keyToTs(today)) / DAY_MS);
+  return (
+    <button className="holiday-row" onClick={onClick}>
+      <span className="set-icon" aria-hidden>
+        🏖️
+      </span>
+      <span className="set-text">
+        <span className="set-title">
+          {h.name} {onNow && <span className="on-now">On now</span>}
+        </span>
+        <span className="set-sub">
+          {fmt(h.start)} – {fmt(h.end)} · {days} day{days === 1 ? '' : 's'}
+          {!onNow && startsIn > 0 ? ` · starts in ${startsIn} day${startsIn === 1 ? '' : 's'}` : ''}
+        </span>
+      </span>
+      <ChevronRight size={18} className="faint" />
+    </button>
+  );
+}
+
 function Row({ icon, title, sub, children, indent }: { icon: string; title: string; sub: string; children: ReactNode; indent?: boolean }) {
   return (
     <div className={`set-row${indent ? ' is-indent' : ''}`}>
@@ -300,9 +313,6 @@ function Row({ icon, title, sub, children, indent }: { icon: string; title: stri
   );
 }
 
-export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return <button role="switch" aria-checked={checked} aria-label={label} className="switch" onClick={() => onChange(!checked)} />;
-}
 
 function MiniStepper({ value, min, max, step, onChange, label }: { value: number; min: number; max: number; step: number; onChange: (v: number) => void; label: string }) {
   const change = (d: number) => {

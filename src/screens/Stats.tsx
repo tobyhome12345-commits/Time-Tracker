@@ -1,20 +1,23 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, Table2 } from 'lucide-react';
 import { useAppData } from '../data/store';
 import { DayChart } from '../components/DayChart';
-import { periodStart, periodStats, shiftPeriod, type Period, type PeriodStats } from '../logic/stats';
-import { addDays, dailyTotals, dayKey, fmtDur, startOfDay } from '../logic/time';
+import { periodStart, periodStats, shiftPeriod, type DayStat, type Period, type PeriodStats } from '../logic/stats';
+import { addDays, dayKey, fmtDur, startOfDay } from '../logic/time';
+import { useDerived } from '../logic/useProgress';
 import { tap } from '../native/platform';
 import { InsightsView } from './Insights';
+import { MonthCalendar } from './Calendar';
 
 type View = Period | 'insights';
 
 export function StatsScreen({ onOpenDay }: { onOpenDay: (ts: number) => void }) {
   const data = useAppData();
+  const { map, ledger } = useDerived();
   const [view, setView] = useState<View>('week');
   const [anchor, setAnchor] = useState(() => Date.now());
-  const map = useMemo(() => dailyTotals(data.entries), [data.entries]);
   const now = Date.now();
+  const stats = view === 'insights' ? null : periodStats(data, map, ledger, view, anchor, now);
 
   return (
     <main className="screen" aria-label="Stats">
@@ -38,13 +41,12 @@ export function StatsScreen({ onOpenDay }: { onOpenDay: (ts: number) => void }) 
           </button>
         ))}
       </div>
-      {view === 'insights' ? (
-        <InsightsView entries={data.entries} map={map} onOpenDay={onOpenDay} />
+      {view === 'insights' || !stats ? (
+        <InsightsView entries={data.entries} map={map} ledger={ledger} onOpenDay={onOpenDay} />
       ) : (
         <PeriodView
           key={view}
-          stats={periodStats(map, view, anchor, now)}
-          goal={data.settings.outsideGoalMin}
+          stats={stats}
           canGoForward={periodStart(view, anchor) < periodStart(view, now)}
           onShift={(n) => {
             tap();
@@ -63,9 +65,7 @@ function periodTitle(s: PeriodStats, now: number) {
     if (s.start === thisWeek) return 'This week';
     if (s.start === addDays(thisWeek, -7)) return 'Last week';
     const end = addDays(s.end, -1);
-    const a = new Date(s.start).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-    const b = new Date(end).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-    return `${a} – ${b}`;
+    return `${new Date(s.start).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${new Date(end).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
   }
   const d = new Date(s.start);
   const sameYear = d.getFullYear() === new Date(now).getFullYear();
@@ -74,19 +74,12 @@ function periodTitle(s: PeriodStats, now: number) {
 
 function periodRange(s: PeriodStats) {
   const end = addDays(s.end, -1);
-  const a = new Date(s.start).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
-  const b = new Date(end).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
-  return `${a} – ${b}`;
+  const f = (t: number) => new Date(t).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  return `${f(s.start)} – ${f(end)}`;
 }
 
-function PeriodView(props: {
-  stats: PeriodStats;
-  goal: number;
-  canGoForward: boolean;
-  onShift: (n: number) => void;
-  onOpenDay: (ts: number) => void;
-}) {
-  const { stats: s, goal, canGoForward, onShift, onOpenDay } = props;
+function PeriodView(props: { stats: PeriodStats; canGoForward: boolean; onShift: (n: number) => void; onOpenDay: (ts: number) => void }) {
+  const { stats: s, canGoForward, onShift, onOpenDay } = props;
   const now = Date.now();
   const todayKey = dayKey(now);
   const defaultSel = s.isCurrent ? todayKey : s.days[s.days.length - 1].key;
@@ -94,10 +87,9 @@ function PeriodView(props: {
   const [table, setTable] = useState(false);
   const sel = s.days.find((d) => d.key === (selected ?? defaultSel)) ?? null;
   const prevName = s.period === 'week' ? 'last week' : 'last month';
-  const compareNote = s.isCurrent ? `vs same point ${prevName}` : `vs ${prevName === 'last week' ? 'the week before' : 'the month before'}`;
-  const pct = s.cur.outsidePct;
-  const pctDelta = pct !== null && s.prev.outsidePct !== null ? Math.round(pct * 100) - Math.round(s.prev.outsidePct * 100) : null;
-  const elapsedDays = s.days.filter((d) => !d.future).length;
+  const note = s.isCurrent ? `vs same point ${prevName}` : `vs the ${s.period} before`;
+  const elapsed = s.days.filter((d) => !d.future);
+  const judged = elapsed.filter((d) => d.tracked && !d.rest && !(d.isToday && !d.hit)).length;
 
   return (
     <div className="stack" style={{ marginTop: 14 }}>
@@ -114,138 +106,153 @@ function PeriodView(props: {
         </button>
       </div>
 
-      <section className="card share-card" aria-label="Outside share">
+      <section className="card share-card" aria-label="Time outside">
         <div className="share-top">
           <div>
-            <div className="share-label">Time spent outside</div>
-            <div className="share-value tnum">{pct === null ? '–' : `${Math.round(pct * 100)}%`}</div>
+            <div className="share-label">Time outside</div>
+            <div className="share-value tnum">{fmtDur(s.cur.minutes)}</div>
           </div>
-          {pctDelta !== null && <Delta value={pctDelta} unit="pts" upIsGood note={compareNote} />}
+          {(s.cur.minutes || s.prev.minutes) > 0 && <Delta value={s.cur.minutes - s.prev.minutes} unit="min" note={note} />}
         </div>
-        <div className="share-bar" aria-hidden>
-          {pct !== null ? (
-            <>
-              {s.cur.outside > 0 && <span style={{ flex: s.cur.outside, background: 'var(--outside)' }} />}
-              {s.cur.inside > 0 && <span style={{ flex: s.cur.inside, background: 'var(--inside)' }} />}
-            </>
-          ) : (
-            <span style={{ flex: 1, background: 'var(--surface-2)' }} />
-          )}
+        <div className="stat-row tnum">
+          <span>
+            <b>{fmtDur(s.cur.avg)}</b> / day
+          </span>
+          <span>
+            🎯 <b>{s.cur.hits}</b>/{judged || elapsed.length} targets hit
+          </span>
         </div>
       </section>
 
       <div className="grid-2">
-        <StatTile label="Outside" color="var(--outside)" value={s.cur.outside} prev={s.prev.outside} upIsGood perDay={elapsedDays} note={compareNote} />
-        <StatTile label="Inside" color="var(--inside)" value={s.cur.inside} prev={s.prev.inside} upIsGood={false} perDay={elapsedDays} note={compareNote} />
+        <section className="card stat-tile">
+          <div className="stat-label">⭐ XP this {s.period}</div>
+          <div className={`stat-value tnum ${s.cur.xp > 0 ? 'xp-gain' : s.cur.xp < 0 ? 'xp-loss' : ''}`}>
+            {s.cur.xp > 0 ? '+' : ''}
+            {s.cur.xp}
+          </div>
+          {(s.cur.xp !== 0 || s.prev.xp !== 0) && <Delta value={s.cur.xp - s.prev.xp} unit="xp" note={note} compact />}
+        </section>
+        <section className="card stat-tile">
+          <div className="stat-label">🔥 Best day</div>
+          {(() => {
+            const best = elapsed.reduce<DayStat | null>((b, d) => (d.minutes > (b?.minutes ?? 0) ? d : b), null);
+            return best ? (
+              <>
+                <div className="stat-value tnum">{fmtDur(best.minutes)}</div>
+                <div className="stat-sub">{new Date(best.ts).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric' })}</div>
+              </>
+            ) : (
+              <div className="stat-sub" style={{ marginTop: 8 }}>
+                No outdoor time yet
+              </div>
+            );
+          })()}
+        </section>
       </div>
 
-      <section className="card chart-card" aria-label="Daily chart">
+      <section className="card chart-card" aria-label={s.period === 'week' ? 'Daily chart' : 'Calendar'}>
         <div className="spread chart-head">
-          <h2 className="card-title">Day by day</h2>
-          <div className="legend">
-            <span className="legend-item">
-              <i style={{ background: 'var(--outside)' }} /> Outside{s.period === 'month' ? ' ↑' : ''}
-            </span>
-            <span className="legend-item">
-              <i style={{ background: 'var(--inside)' }} /> Inside{s.period === 'month' ? ' ↓' : ''}
-            </span>
-          </div>
+          <h2 className="card-title">{s.period === 'week' ? 'Day by day' : '📅 Calendar'}</h2>
+          {s.period === 'week' && (
+            <div className="legend">
+              <span className="legend-item">
+                <i style={{ background: 'var(--outside)' }} /> Hit
+              </span>
+              <span className="legend-item">
+                <i style={{ background: 'var(--miss)' }} /> Missed
+              </span>
+              <span className="legend-item">
+                <i className="legend-target" /> Target
+              </span>
+            </div>
+          )}
         </div>
-        {table ? (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th scope="col">Day</th>
-                <th scope="col">Outside</th>
-                <th scope="col">Inside</th>
-              </tr>
-            </thead>
-            <tbody>
-              {s.days
-                .filter((d) => !d.future)
-                .map((d) => (
-                  <tr key={d.key} onClick={() => onOpenDay(d.ts)}>
-                    <th scope="row">{new Date(d.ts).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}</th>
-                    <td className="tnum">{fmtDur(d.outside)}</td>
-                    <td className="tnum">{fmtDur(d.inside)}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        ) : (
-          <DayChart
+        {s.period === 'month' ? (
+          <MonthCalendar
             days={s.days}
-            mode={s.period === 'week' ? 'grouped' : 'mirror'}
-            goal={goal}
             selected={sel?.key ?? null}
             onSelect={(k) => {
               tap();
               setSelected(k);
             }}
-            todayKey={todayKey}
-            ariaLabel={`Outside and inside time per day, ${periodTitle(s, now)}`}
-            xLabel={(d, i) => {
-              const dt = new Date(d.ts);
-              if (s.period === 'week') return dt.toLocaleDateString(undefined, { weekday: 'narrow' });
-              const day = dt.getDate();
-              if (d.key === todayKey) return String(day);
-              const todayIdx = s.days.findIndex((x) => x.key === todayKey);
-              const nearToday = todayIdx >= 0 && Math.abs(i - todayIdx) <= 2;
-              return (day === 1 || (day % 5 === 0 && s.days.length - i > 2)) && !nearToday ? String(day) : null;
+          />
+        ) : table ? (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Day</th>
+                <th scope="col">Outside</th>
+                <th scope="col">Target</th>
+                <th scope="col">XP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {elapsed.map((d) => (
+                <tr key={d.key} onClick={() => onOpenDay(d.ts)}>
+                  <th scope="row">{new Date(d.ts).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}</th>
+                  <td className="tnum">{fmtDur(d.minutes)}</td>
+                  <td className="tnum">{d.rest ? 'rest' : `${fmtDur(d.target)}${d.hit ? ' ✓' : ''}`}</td>
+                  <td className="tnum">{d.xp === null ? '–' : d.xp > 0 ? `+${d.xp}` : d.xp}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <DayChart
+            days={s.days}
+            selected={sel?.key ?? null}
+            onSelect={(k) => {
+              tap();
+              setSelected(k);
             }}
+            ariaLabel={`Outside time per day, ${periodTitle(s, now)}`}
           />
         )}
-        {!table && sel && (
-          <div className="readout">
-            <div className="readout-day">{new Date(sel.ts).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
-            <div className="readout-vals tnum">
-              <span>
-                <i className="key-line" style={{ background: 'var(--outside)' }} />
-                <b>{fmtDur(sel.outside)}</b>
-              </span>
-              <span>
-                <i className="key-line" style={{ background: 'var(--inside)' }} />
-                <b>{fmtDur(sel.inside)}</b>
-              </span>
-            </div>
-            <button className="readout-open" onClick={() => onOpenDay(startOfDay(sel.ts))}>
-              View <ArrowRight size={16} />
-            </button>
-          </div>
+        {!table && sel && <Readout d={sel} onOpen={() => onOpenDay(startOfDay(sel.ts))} />}
+        {s.period === 'week' && (
+          <button className="table-toggle" onClick={() => setTable(!table)} aria-pressed={table}>
+            <Table2 size={16} /> {table ? 'Show chart' : 'Show as table'}
+          </button>
         )}
-        <button className="table-toggle" onClick={() => setTable(!table)} aria-pressed={table}>
-          <Table2 size={16} /> {table ? 'Show chart' : 'Show as table'}
-        </button>
       </section>
-
-      {s.loggedDays === 0 && <div className="card empty">Nothing logged in this {s.period} yet.</div>}
     </div>
   );
 }
 
-function StatTile(props: { label: string; color: string; value: number; prev: number; upIsGood: boolean; perDay: number; note: string }) {
-  const d = props.value || props.prev ? props.value - props.prev : null;
+function Readout({ d, onOpen }: { d: DayStat; onOpen: () => void }) {
   return (
-    <section className="card stat-tile">
-      <div className="stat-label">
-        <i className="legend-swatch" style={{ background: props.color }} /> {props.label}
+    <div className="readout">
+      <div className="readout-main">
+        <div className="readout-day">
+          {new Date(d.ts).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+          {d.type === 'holiday' ? ` · 🏖️ ${d.holidayName ?? 'Holiday'}` : ''}
+        </div>
+        <div className="readout-vals tnum">
+          <span>
+            <b>{fmtDur(d.minutes)}</b> of {d.rest ? 'rest day' : fmtDur(d.target)}
+            {d.hit ? ' ✓' : ''}
+          </span>
+          {d.xp !== null && <span className={d.xp > 0 ? 'xp-gain' : d.xp < 0 ? 'xp-loss' : ''}>{d.xp > 0 ? `+${d.xp}` : d.xp} XP</span>}
+          {d.isToday && d.xp === null && !d.rest && <span className="faint">today, in progress</span>}
+        </div>
       </div>
-      <div className="stat-value tnum">{fmtDur(props.value)}</div>
-      <div className="stat-sub tnum">{fmtDur(props.value / Math.max(1, props.perDay))} / day</div>
-      {d !== null && <Delta value={d} unit="min" upIsGood={props.upIsGood} note={props.note} compact />}
-    </section>
+      <button className="readout-open" onClick={onOpen}>
+        View <ArrowRight size={16} />
+      </button>
+    </div>
   );
 }
 
-/** Signed change with icon + label (never colour alone). */
-export function Delta({ value, unit, upIsGood, note, compact }: { value: number; unit: 'pts' | 'min'; upIsGood: boolean; note: string; compact?: boolean }) {
+/** Signed change with icon + label (never colour alone). Up is good for both minutes and XP. */
+export function Delta({ value, unit, note, compact }: { value: number; unit: 'min' | 'xp'; note: string; compact?: boolean }) {
+  const flat = Math.abs(value) < 1;
   const up = value > 0;
-  const flat = Math.abs(value) < (unit === 'min' ? 1 : 1);
-  const good = flat ? null : up === upIsGood;
   const Icon = flat ? ArrowRight : up ? ArrowUpRight : ArrowDownRight;
-  const text = unit === 'pts' ? `${up ? '+' : flat ? '±' : '−'}${Math.abs(value)} pts` : `${up ? '+' : flat ? '±' : '−'}${fmtDur(Math.abs(value))}`;
+  const abs = Math.abs(Math.round(value));
+  const text = `${up ? '+' : flat ? '±' : '−'}${unit === 'min' ? fmtDur(abs) : `${abs} XP`}`;
   return (
-    <div className={`delta ${good === null ? 'is-flat' : good ? 'is-good' : 'is-bad'}${compact ? ' is-compact' : ''}`}>
+    <div className={`delta ${flat ? 'is-flat' : up ? 'is-good' : 'is-bad'}${compact ? ' is-compact' : ''}`}>
       <span className="delta-val">
         <Icon size={16} strokeWidth={2.75} aria-hidden /> {text}
       </span>

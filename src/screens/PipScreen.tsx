@@ -1,31 +1,37 @@
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { ChevronRight, HelpCircle, Sparkles } from 'lucide-react';
 import { useAppData } from '../data/store';
 import { Pip } from '../mascot/Pip';
 import { Sheet } from '../components/Sheet';
-import { moodFor, moodLine, STAGES, type Mood, type Progress } from '../logic/progress';
-import { useDerived } from '../logic/useProgress';
-import { dayKey, fmtDur, totalsFor } from '../logic/time';
+import { moodFor, moodLine, STAGES, type Mood } from '../logic/progress';
+import { useDerived, type Derived } from '../logic/useProgress';
 import { tap } from '../native/platform';
+import { ChallengeCard } from './ChallengeCard';
+import { XpHistoryList, XpHistorySheet, XpRulesSheet } from './XpHistory';
 
 const MOODS: { id: Mood; name: string; when: string }[] = [
   { id: 'sleepy', name: 'Sleepy', when: 'Nothing logged yet today' },
-  { id: 'happy', name: 'Happy', when: 'Outside is winning' },
-  { id: 'cheer', name: 'Cheering', when: 'Outside goal hit!' },
-  { id: 'unsure', name: 'Unsure', when: 'Inside is ahead' },
-  { id: 'droopy', name: 'Droopy', when: 'Over the inside limit, no outside' },
+  { id: 'happy', name: 'Happy', when: 'On the way to the target' },
+  { id: 'cheer', name: 'Cheering', when: 'Target hit!' },
+  { id: 'worried', name: 'Worried', when: 'After 5pm and not there yet' },
+  { id: 'droopy', name: 'Droopy', when: 'Lost XP yesterday' },
+  { id: 'rest', name: 'Resting', when: 'Rest day' },
 ];
 
 export function PipScreen() {
   const data = useAppData();
-  const { map, progress } = useDerived();
+  const derived = useDerived();
+  const { ledger, challenge } = derived;
   const [evo, setEvo] = useState(false);
-  const today = totalsFor(map, dayKey(Date.now()));
-  const mood = moodFor(today, data.settings);
-  const { level } = progress;
+  const [history, setHistory] = useState(false);
+  const [rules, setRules] = useState(false);
+  const row = ledger.today;
+  const mood = moodFor(ledger, row);
+  const { level } = ledger;
   const stage = STAGES.find((s) => s.id === level.stage)!;
   const next = STAGES.find((s) => s.from > level.level);
-  const earned = progress.badgeResults.filter((b) => b.earned).length;
+  const earned = derived.badges.filter((b) => b.earned || data.badges[b.def.id]).length;
+  const holiday = row.info.type === 'holiday';
 
   return (
     <main className="screen" aria-label="Pip">
@@ -34,15 +40,25 @@ export function PipScreen() {
           <p className="screen-sub">Your outdoor buddy</p>
           <h1 className="screen-title">Pip</h1>
         </div>
+        <button
+          className="icon-btn"
+          aria-label="How XP works"
+          onClick={() => {
+            tap();
+            setRules(true);
+          }}
+        >
+          <HelpCircle size={22} />
+        </button>
       </div>
 
       <div className="stack">
         <section className="card pip-hero">
           <div className="bubble" role="status">
-            {moodLine(mood)}
+            {moodLine(mood, ledger, row)}
           </div>
           <div className="pip-stage-wrap">
-            <Pip stage={level.stage} mood={mood} size={190} />
+            <Pip stage={level.stage} mood={mood} size={190} holiday={holiday} />
           </div>
           <div className="pip-level-row">
             <span className="level-chip">Lv {level.level}</span>
@@ -54,9 +70,9 @@ export function PipScreen() {
             </div>
             <div className="spread xp-text tnum">
               <span>
-                {level.into.toLocaleString()} / {level.need.toLocaleString()} XP
+                {level.xp.toLocaleString()} XP · {level.into} / {level.need}
               </span>
-              <span>Lv {level.level + 1} in {fmtXp(level.need - level.into)}</span>
+              <span>{level.need - level.into} XP to Lv {level.level + 1}</span>
             </div>
           </div>
           {next && (
@@ -75,86 +91,90 @@ export function PipScreen() {
           </button>
         </section>
 
-        <h2 className="section-title">Streaks</h2>
-        <Streaks progress={progress} />
+        <h2 className="section-title">Streak</h2>
+        <StreakCard derived={derived} />
+
+        <ChallengeCard challenge={challenge} />
+
+        <div className="spread" style={{ margin: '10px 4px 0' }}>
+          <h2 className="section-title" style={{ margin: 0 }}>
+            XP history
+          </h2>
+          <button
+            className="link-btn"
+            onClick={() => {
+              tap();
+              setHistory(true);
+            }}
+          >
+            See all <ChevronRight size={16} />
+          </button>
+        </div>
+        <section className="card xp-history-card">
+          <XpHistoryList rows={ledger.rows.slice(-7).reverse()} />
+        </section>
 
         <div className="spread" style={{ margin: '10px 4px 0' }}>
           <h2 className="section-title" style={{ margin: 0 }}>
             Badges
           </h2>
           <span className="badge-count tnum">
-            {earned} / {progress.badgeResults.length}
+            {earned} / {derived.badges.length}
           </span>
         </div>
-        <Badges progress={progress} unlocked={data.badges} />
+        <Badges derived={derived} unlocked={data.badges} />
       </div>
 
       {evo && <EvolutionSheet level={level.level} stage={level.stage} onClose={() => setEvo(false)} />}
+      {history && <XpHistorySheet rows={ledger.rows} onClose={() => setHistory(false)} />}
+      {rules && <XpRulesSheet onClose={() => setRules(false)} />}
     </main>
   );
 }
 
-function fmtXp(xp: number) {
-  // 1 XP = 1 outside minute
-  return `${fmtDur(xp)} outside`;
-}
-
-function Streaks({ progress }: { progress: Progress }) {
-  const recent = progress.days.slice(-14);
+function StreakCard({ derived }: { derived: Derived }) {
+  const { streak, rows } = derived.ledger;
+  const recent = rows.slice(-14);
   return (
-    <>
-      <div className="grid-2">
-        <StreakCard emoji="🔥" title="Outside wins" sub="Outside beat inside" s={progress.winStreak} />
-        <StreakCard emoji="🎯" title="Goal streak" sub="Hit your outside goal" s={progress.goalStreak} />
+    <section className={`card streak-wide${streak.current > 0 ? ' is-live' : ''}`} aria-label="Target streak">
+      <div className="streak-wide-top">
+        <span className="streak-emoji" aria-hidden>
+          🔥
+        </span>
+        <div>
+          <div className="streak-num tnum">
+            {streak.current}
+            <small> day{streak.current === 1 ? '' : 's'}</small>
+          </div>
+          <div className="streak-sub">Target streak · best {streak.best}</div>
+        </div>
+        <div className="streak-bonus">
+          <span className="tnum">+{Math.min(25, 5 * (streak.current + (streak.todayDone ? 0 : 1)))}</span>
+          <small>XP bonus {streak.todayDone ? 'today' : 'next hit'}</small>
+        </div>
       </div>
-      {recent.length > 0 && (
-        <section className="card" aria-label="Last 14 days">
-          <div className="spread">
-            <h3 className="card-title" style={{ fontSize: 15 }}>
-              Last 14 days
-            </h3>
-            <span className="streak-key">
-              <i className="dot dot-win" /> win <i className="dot dot-goal" /> goal
+      {streak.current > 0 && !streak.todayDone && !derived.ledger.today.info.rest && <div className="streak-alert">Hit today’s target to keep it alive!</div>}
+      <div className="day-dots">
+        {recent.map((r) => (
+          <div key={r.info.key} className="day-dot-col">
+            <span
+              className={`day-dot${r.hit ? ' is-goal' : r.info.rest ? ' is-rest' : r.pending ? ' is-today' : r.xp < 0 ? ' is-miss' : ''}`}
+              aria-label={`${r.info.key}: ${r.hit ? 'target hit' : r.info.rest ? 'rest day' : r.pending ? 'today' : 'missed'}`}
+            >
+              {r.hit ? '✓' : r.info.rest ? 'z' : ''}
             </span>
+            <span className="day-dot-label">{new Date(r.info.ts).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>
           </div>
-          <div className="day-dots">
-            {recent.map((d) => (
-              <div key={d.key} className="day-dot-col" title={d.key}>
-                <span className={`day-dot${d.goal ? ' is-goal' : d.win ? ' is-win' : d.inside || d.outside ? ' is-logged' : ''}`} aria-label={`${d.key}: ${d.goal ? 'goal hit' : d.win ? 'outside won' : 'no win'}`}>
-                  {d.goal ? '★' : ''}
-                </span>
-                <span className="day-dot-label">{new Date(d.ts).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-    </>
-  );
-}
-
-function StreakCard({ emoji, title, sub, s }: { emoji: string; title: string; sub: string; s: { current: number; best: number; todayDone: boolean } }) {
-  return (
-    <section className={`card streak-card${s.current > 0 ? ' is-live' : ''}`}>
-      <div className="streak-emoji" aria-hidden>
-        {emoji}
+        ))}
       </div>
-      <div className="streak-num tnum">
-        {s.current}
-        <small> day{s.current === 1 ? '' : 's'}</small>
-      </div>
-      <div className="streak-title">{title}</div>
-      <div className="streak-sub">{sub}</div>
-      <div className="streak-best tnum">Best: {s.best}</div>
-      {s.current > 0 && !s.todayDone && <div className="streak-alert">Keep it alive today!</div>}
     </section>
   );
 }
 
-function Badges({ progress, unlocked }: { progress: Progress; unlocked: Record<string, number> }) {
+function Badges({ derived, unlocked }: { derived: Derived; unlocked: Record<string, number> }) {
   return (
     <div className="badge-grid">
-      {progress.badgeResults.map(({ def, result, earned }) => {
+      {derived.badges.map(({ def, result, earned }) => {
         const got = earned || !!unlocked[def.id];
         const prog = Array.isArray(result) && !got ? result : null;
         return (
@@ -182,7 +202,7 @@ function EvolutionSheet({ level, stage, onClose }: { level: number; stage: strin
   return (
     <Sheet title="Pip’s evolution" onClose={onClose}>
       <p className="muted evo-intro">
-        Pip earns <b className="text-strong">1 XP for every minute outside</b>, plus <b className="text-strong">30 bonus XP</b> each day you hit your goal.
+        Pip grows when you <b className="text-strong">beat your daily target</b>, and shrinks if you miss it. Keep getting outside to reach the Mighty Tree!
       </p>
       <div className="evo-grid">
         {STAGES.map((s) => {
@@ -208,6 +228,9 @@ function EvolutionSheet({ level, stage, onClose }: { level: number; stage: strin
           </div>
         ))}
       </div>
+      <p className="settings-note" style={{ textAlign: 'center' }}>
+        On holidays Pip wears sunglasses at every stage 😎
+      </p>
     </Sheet>
   );
 }

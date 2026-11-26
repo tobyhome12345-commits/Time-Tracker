@@ -13,12 +13,12 @@
   --grid: #e8ece6;
   --baseline: #c3ccc5;
 
-  /* Data series (validated: CVD ΔE 28.9, normal ΔE 36.3, ≥3:1 on surface) */
+  /* Data series: outside green (≥ 3:1 on surface) */
   --outside: #16a34a;
-  --inside: #7355ea;
-  /* Solid fills that carry white text (≥ 4.5:1 in both themes) */
+  /* Missed-target bars/days: ≥ 2:1 on the surface, always paired with ✓ / labels */
+  --miss: #9fb5a6;
+  /* Solid fill that carries white text (≥ 4.5:1 in both themes) */
   --outside-solid: #15803d;
-  --inside-solid: #6a4ce2;
 
   /* Accent is overwritten at runtime from Settings */
   --accent: #16a34a;
@@ -59,9 +59,9 @@
   --grid: #26302a;
   --baseline: #3f4b43;
 
-  /* Dark steps (validated vs #18201b: CVD ΔE 22.1, normal ΔE 30.8) */
+  /* Dark steps (validated vs #18201b) */
   --outside: #22b05a;
-  --inside: #9b87f5;
+  --miss: #56695d;
 
   --good-ink: #53c97a;
   --bad-ink: #fb923c;
@@ -75,7 +75,6 @@
 
 :root {
   --outside-soft: color-mix(in oklab, var(--outside) 14%, var(--surface));
-  --inside-soft: color-mix(in oklab, var(--inside) 14%, var(--surface));
   --accent-soft: color-mix(in oklab, var(--accent) 16%, var(--surface));
   --accent-strong: color-mix(in oklab, var(--accent) 82%, var(--text));
 }

@@ -1,4 +1,4 @@
-import type { Entry, Kind } from '../data/types';
+import type { Entry } from '../data/types';
 
 export const MIN = 60_000;
 export const DAY_MS = 86_400_000;
@@ -81,32 +81,37 @@ export function splitByDay(e: Pick<Entry, 'start' | 'minutes'>): { day: string; 
   });
 }
 
-export interface DayTotals {
-  inside: number;
-  outside: number;
-}
-
-/** Map of dayKey → minutes per kind. */
-export function dailyTotals(entries: Entry[]): Map<string, DayTotals> {
-  const map = new Map<string, DayTotals>();
+/** Map of dayKey → outside minutes (entries crossing midnight are split). */
+export function dailyTotals(entries: Entry[]): Map<string, number> {
+  const map = new Map<string, number>();
   for (const e of entries) {
-    for (const c of splitByDay(e)) {
-      let t = map.get(c.day);
-      if (!t) map.set(c.day, (t = { inside: 0, outside: 0 }));
-      t[e.kind] += c.minutes;
-    }
+    for (const c of splitByDay(e)) map.set(c.day, (map.get(c.day) ?? 0) + c.minutes);
   }
   return map;
-}
-
-export function totalsFor(map: Map<string, DayTotals>, day: string): DayTotals {
-  return map.get(day) ?? { inside: 0, outside: 0 };
 }
 
 /** Entries that overlap the given local day. */
 export function entriesOnDay(entries: Entry[], dayStart: number): Entry[] {
   const dayEnd = addDays(dayStart, 1);
   return entries.filter((e) => e.start < dayEnd && e.start + e.minutes * MIN > dayStart);
+}
+
+/** Next calendar day key: '2026-11-30' → '2026-12-01'. */
+export function nextKey(key: string): string {
+  return dayKey(addDays(keyToTs(key), 1));
+}
+
+export function addDaysKey(key: string, n: number): string {
+  return dayKey(addDays(keyToTs(key), n));
+}
+
+/** 0 = Monday … 6 = Sunday */
+export function weekdayIndex(ts: number): number {
+  return (new Date(ts).getDay() + 6) % 7;
+}
+
+export function isWeekend(ts: number): boolean {
+  return weekdayIndex(ts) >= 5;
 }
 
 /* ───────────── Formatting ───────────── */
@@ -173,5 +178,3 @@ export function fromInputs(date: string, time: string): number {
   const [hh, mm] = time.split(':').map(Number);
   return new Date(y, m - 1, d, hh || 0, mm || 0, 0, 0).getTime();
 }
-
-export const otherKind = (k: Kind): Kind => (k === 'inside' ? 'outside' : 'inside');

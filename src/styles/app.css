@@ -23,12 +23,26 @@
   transform: scale(0.97);
 }
 
-.log-btn-inside {
-  background: var(--inside-solid);
-}
 
 .log-btn-outside {
   background: var(--outside-solid);
+}
+
+.log-btn-wide {
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  min-height: 84px;
+  gap: 14px;
+}
+
+.log-btn-wide .log-btn-text {
+  flex: 1;
+  font-size: 21px;
+}
+
+.log-btn-wide .log-btn-emoji {
+  font-size: 36px;
 }
 
 .log-btn-top {
@@ -228,13 +242,10 @@
   flex: none;
 }
 
-.entry-icon-outside {
+.entry-icon {
   background: var(--outside-soft);
 }
 
-.entry-icon-inside {
-  background: var(--inside-soft);
-}
 
 .entry-main {
   flex: 1;
@@ -271,13 +282,10 @@
   border-radius: 10px;
 }
 
-.entry-dur-outside {
+.entry-dur {
   background: var(--outside-soft);
 }
 
-.entry-dur-inside {
-  background: var(--inside-soft);
-}
 
 /* ───── Log sheet ───── */
 
@@ -307,11 +315,6 @@
   font-size: 22px;
 }
 
-.kind-inside[aria-checked='true'] {
-  background: var(--inside-soft);
-  border-color: var(--inside);
-  color: var(--text);
-}
 
 .kind-outside[aria-checked='true'] {
   background: var(--outside-soft);
@@ -392,6 +395,11 @@
   font-size: 14px;
 }
 
+.log-save {
+  background: var(--outside-solid);
+  color: #fff;
+}
+
 .log-save:disabled {
   background: var(--surface-3) !important;
   color: var(--text-3) !important;
@@ -430,6 +438,7 @@
 }
 
 .timer-start {
+  --k: var(--outside);
   border: 2px solid var(--k);
   color: var(--text);
   background: color-mix(in oklab, var(--k) 10%, var(--surface));
@@ -439,13 +448,7 @@
   color: var(--k);
 }
 
-.timer-start-inside {
-  --k: var(--inside);
-}
 
-.timer-start-outside {
-  --k: var(--outside);
-}
 
 .timer-running {
   --k: var(--outside);
@@ -457,10 +460,6 @@
   gap: 4px;
 }
 
-.timer-running-inside {
-  --k: var(--inside);
-  --k-solid: var(--inside-solid);
-}
 
 .timer-badge {
   display: inline-flex;
@@ -562,9 +561,6 @@
   --k: var(--outside-solid);
 }
 
-.timer-pill-inside {
-  --k: var(--inside-solid);
-}
 
 .timer-pill .timer-dot {
   background: #fff;
@@ -1828,4 +1824,667 @@
   min-height: 40px;
   padding: 0 16px;
   font-size: 14px;
+}
+
+/* ───── v2: outside-only ───── */
+
+.day-chip {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-weight: 750;
+  font-size: 14.5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  margin-top: -4px;
+}
+
+.day-chip b {
+  font-weight: 900;
+}
+
+.day-chip-weekend {
+  background: color-mix(in oklab, var(--sun) 16%, var(--surface));
+}
+
+.day-chip-holiday {
+  background: color-mix(in oklab, #38bdf8 18%, var(--surface));
+}
+
+.day-chip-rest {
+  background: var(--surface-2);
+}
+
+.ring.is-done .ring-seg {
+  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--outside) 60%, transparent));
+}
+
+.ring-extra {
+  font-size: 12.5px;
+  font-weight: 850;
+  fill: var(--good-ink);
+}
+
+.xp-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.xp-big {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.xp-gain {
+  color: var(--good-ink);
+}
+
+.xp-loss {
+  color: var(--bad-ink);
+}
+
+.xp-sub {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.xp-risk {
+  margin-top: 6px;
+  align-self: flex-start;
+  padding: 5px 10px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 850;
+  color: var(--bad-ink);
+  background: color-mix(in oklab, var(--bad-ink) 12%, var(--surface));
+}
+
+.xp-hint {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-3);
+}
+
+.xp-parts {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.xp-parts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.xp-parts b {
+  color: var(--good-ink);
+}
+
+.hero-card .xp-status {
+  align-self: center;
+}
+
+.streak-mini {
+  font-weight: 900;
+  color: var(--text);
+}
+
+.rest-link {
+  margin: 4px auto 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.rest-link:active {
+  background: var(--surface-2);
+}
+
+.rest-note {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-3);
+}
+
+.timer-pill {
+  --k: var(--outside-solid);
+}
+
+/* challenge */
+
+.challenge-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: linear-gradient(150deg, color-mix(in oklab, var(--sun) 16%, var(--surface)), var(--surface) 70%);
+}
+
+.challenge-card.is-done {
+  background: linear-gradient(150deg, color-mix(in oklab, var(--outside) 18%, var(--surface)), var(--surface) 70%);
+}
+
+.challenge-card.is-upcoming {
+  background: var(--surface);
+}
+
+.challenge-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.challenge-emoji {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  font-size: 26px;
+  flex: none;
+}
+
+.challenge-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.challenge-kicker {
+  font-size: 11.5px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+
+.challenge-name {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.challenge-desc {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.challenge-xp {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.challenge-xp.is-won {
+  background: var(--outside-solid);
+  color: #fff;
+  border-color: transparent;
+}
+
+.challenge-prog {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.challenge-prog .progress {
+  flex: 1;
+}
+
+.challenge-count {
+  font-weight: 850;
+  font-size: 14px;
+}
+
+.challenge-note {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+/* streak (Pip tab) */
+
+.streak-wide {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.streak-wide.is-live {
+  background: linear-gradient(160deg, color-mix(in oklab, var(--sun) 18%, var(--surface)), var(--surface) 70%);
+}
+
+.streak-wide-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.streak-wide-top .streak-emoji {
+  font-size: 34px;
+}
+
+.streak-bonus {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--good-ink);
+}
+
+.streak-bonus small {
+  font-size: 11.5px;
+  font-weight: 750;
+  color: var(--text-2);
+}
+
+.day-dot.is-rest {
+  background: var(--surface-3);
+  color: var(--text-2);
+}
+
+.day-dot.is-miss {
+  background: color-mix(in oklab, var(--bad-ink) 30%, var(--surface));
+}
+
+.day-dot.is-today {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--outside);
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 36px;
+  font-weight: 850;
+  font-size: 14px;
+  color: var(--accent-strong);
+}
+
+/* XP history */
+
+.xp-history-card {
+  padding: 6px 12px;
+}
+
+.xp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.xp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px;
+}
+
+.xp-row + .xp-row {
+  border-top: 1px solid var(--border);
+}
+
+.xp-row-emoji {
+  font-size: 20px;
+  width: 28px;
+  text-align: center;
+  flex: none;
+}
+
+.xp-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.xp-row-title {
+  font-weight: 800;
+  font-size: 14.5px;
+}
+
+.xp-row-sub {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.xp-row-level {
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.xp-row-level.is-up {
+  color: var(--good-ink);
+}
+
+.xp-row-level.is-down {
+  color: var(--bad-ink);
+}
+
+.xp-row-xp {
+  font-weight: 900;
+  font-size: 16px;
+  min-width: 48px;
+  text-align: right;
+}
+
+.xp-row-xp.is-gain {
+  color: var(--good-ink);
+}
+
+.xp-row-xp.is-loss {
+  color: var(--bad-ink);
+}
+
+.xp-row-xp.is-pending {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.xp-week + .xp-week {
+  margin-top: 18px;
+}
+
+.xp-week-head {
+  font-size: 13px;
+  font-weight: 850;
+  color: var(--text-2);
+  padding: 8px 2px;
+  border-bottom: 2px solid var(--border);
+}
+
+.rules h3 {
+  margin: 16px 0 6px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.rules h3:first-child {
+  margin-top: 4px;
+}
+
+.rules ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+/* settings: holidays */
+
+.holiday-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 0;
+}
+
+.holiday-row + .holiday-row {
+  border-top: 1px solid var(--border);
+}
+
+.on-now {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 900;
+  background: var(--outside-solid);
+  color: #fff;
+  vertical-align: 2px;
+}
+
+.past-holidays {
+  margin-top: 10px;
+}
+
+.past-holidays summary {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-2);
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+/* stats v2 */
+
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.stat-row b {
+  color: var(--text);
+  font-weight: 900;
+}
+
+.legend-target {
+  width: 14px !important;
+  height: 3px !important;
+  border-radius: 2px !important;
+  background: var(--text);
+  opacity: 0.6;
+}
+
+.dc-bar-hit {
+  fill: var(--outside);
+}
+
+.dc-bar-miss {
+  fill: var(--miss);
+}
+
+.dc-target {
+  stroke: var(--text);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+.dc-check {
+  font-size: 13px;
+  font-weight: 900;
+  fill: var(--good-ink);
+}
+
+.dc-rest {
+  font-size: 12px;
+  font-weight: 900;
+  fill: var(--text-3);
+}
+
+.dc-xp {
+  font-size: 11.5px;
+  font-weight: 850;
+  fill: var(--text-3);
+}
+
+.dc-xp.is-gain {
+  fill: var(--good-ink);
+}
+
+.dc-xp.is-loss {
+  fill: var(--bad-ink);
+}
+
+.readout-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.readout-main .readout-vals {
+  flex: none;
+  font-size: 14px;
+}
+
+/* calendar */
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.cal-head {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 850;
+  color: var(--text-3);
+  padding-bottom: 2px;
+}
+
+.cal-head.is-weekend {
+  color: var(--text-2);
+}
+
+.cal-day {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13.5px;
+  color: var(--text);
+  border: 2px solid transparent;
+  min-width: 0;
+}
+
+.cal-day.lvl-0 {
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.cal-day.lvl-1,
+.cal-swatch.lvl-1 {
+  background: color-mix(in oklab, var(--outside) 22%, var(--surface));
+}
+
+.cal-day.lvl-2,
+.cal-swatch.lvl-2 {
+  background: color-mix(in oklab, var(--outside) 45%, var(--surface));
+}
+
+.cal-day.lvl-3,
+.cal-swatch.lvl-3 {
+  background: color-mix(in oklab, var(--outside) 80%, var(--surface));
+  color: #fff;
+}
+
+.cal-day.lvl-4,
+.cal-swatch.lvl-4 {
+  background: color-mix(in oklab, var(--outside) 70%, #0b3d1c);
+  color: #fff;
+}
+
+.cal-swatch.lvl-0 {
+  background: var(--surface-2);
+}
+
+.cal-day.is-future {
+  background: transparent;
+  color: var(--text-3);
+  opacity: 0.6;
+}
+
+.cal-day.is-today {
+  border-color: var(--text);
+}
+
+.cal-day.is-selected {
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.cal-num {
+  line-height: 1;
+}
+
+.cal-mark {
+  font-size: 11px;
+  line-height: 1;
+  height: 11px;
+  margin-top: 2px;
+}
+
+.cal-hol {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 9px;
+}
+
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--text-2);
+}
+
+.cal-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.cal-legend-sep {
+  margin-left: 10px;
+}
+
+.vs-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
 }

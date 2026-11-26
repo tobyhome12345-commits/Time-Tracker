@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import type { Entry, Kind } from '../data/types';
-import { findCategory, KIND_EMOJI, KIND_LABEL } from '../data/categories';
+import type { Entry } from '../data/types';
+import { findCategory } from '../data/categories';
 import { insights, WEEKDAYS, WEEKDAYS_LONG, type CategoryStat } from '../logic/stats';
-import { fmtDur, type DayTotals } from '../logic/time';
+import { fmtDur } from '../logic/time';
+import type { Ledger } from '../logic/xp';
 import { tap } from '../native/platform';
 
 const RANGES: { id: string; label: string; days: number | null }[] = [
@@ -12,11 +13,10 @@ const RANGES: { id: string; label: string; days: number | null }[] = [
   { id: 'all', label: 'All time', days: null },
 ];
 
-export function InsightsView({ entries, map, onOpenDay }: { entries: Entry[]; map: Map<string, DayTotals>; onOpenDay: (ts: number) => void }) {
+export function InsightsView({ entries, map, ledger, onOpenDay }: { entries: Entry[]; map: Map<string, number>; ledger: Ledger; onOpenDay: (ts: number) => void }) {
   const [range, setRange] = useState('30');
   const r = RANGES.find((x) => x.id === range)!;
-  const ins = useMemo(() => insights(entries, map, r.days), [entries, map, r.days]);
-  const hasData = ins.totalInside + ins.totalOutside > 0;
+  const ins = useMemo(() => insights(entries, map, ledger, r.days), [entries, map, ledger, r.days]);
   const pod = ins.partOfDay;
   const podTotal = pod.morning + pod.afternoon + pod.evening;
 
@@ -40,26 +40,33 @@ export function InsightsView({ entries, map, onOpenDay }: { entries: Entry[]; ma
         ))}
       </div>
 
-      {!hasData ? (
-        <div className="card empty">Log a few days and your insights will appear here ✨</div>
+      {ins.totalMinutes === 0 ? (
+        <div className="card empty">Log some outdoor time and your insights will appear here ✨</div>
       ) : (
         <>
           <div className="grid-2">
             <section className="card stat-tile">
-              <div className="stat-label">
-                <i className="legend-swatch" style={{ background: 'var(--outside)' }} /> Avg outside
-              </div>
-              <div className="stat-value tnum">{fmtDur(ins.avgOutside)}</div>
+              <div className="stat-label">🌳 Average</div>
+              <div className="stat-value tnum">{fmtDur(ins.avg)}</div>
               <div className="stat-sub">per day</div>
             </section>
             <section className="card stat-tile">
-              <div className="stat-label">
-                <i className="legend-swatch" style={{ background: 'var(--inside)' }} /> Avg inside
-              </div>
-              <div className="stat-value tnum">{fmtDur(ins.avgInside)}</div>
-              <div className="stat-sub">per day</div>
+              <div className="stat-label">🎯 Target hit rate</div>
+              <div className="stat-value tnum">{ins.hitRate === null ? '–' : `${Math.round(ins.hitRate * 100)}%`}</div>
+              <div className="stat-sub">of days</div>
             </section>
           </div>
+
+          <section className="card" aria-label="School days vs weekends">
+            <h2 className="card-title">School days vs weekends</h2>
+            <div className="vs-bars">
+              <VsBar emoji="📚" label="School days" value={ins.weekdayAvg} max={Math.max(ins.weekdayAvg, ins.weekendAvg)} />
+              <VsBar emoji="🎉" label="Weekends" value={ins.weekendAvg} max={Math.max(ins.weekdayAvg, ins.weekendAvg)} />
+            </div>
+            <p className="muted card-sub" style={{ marginBottom: 0 }}>
+              Average outside time per day
+            </p>
+          </section>
 
           {ins.bestDay && (
             <button className="card insight-row" onClick={() => onOpenDay(ins.bestDay!.ts)}>
@@ -67,41 +74,40 @@ export function InsightsView({ entries, map, onOpenDay }: { entries: Entry[]; ma
                 🏆
               </span>
               <span className="insight-main">
-                <span className="insight-kicker">Best outside day</span>
+                <span className="insight-kicker">Best day</span>
                 <span className="insight-title">{new Date(ins.bestDay.ts).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}</span>
-                <span className="insight-sub tnum">{fmtDur(ins.bestDay.outside)} outside</span>
+                <span className="insight-sub tnum">{fmtDur(ins.bestDay.minutes)} outside</span>
               </span>
               <ChevronRight size={20} className="faint" />
             </button>
           )}
 
-          {ins.bestBalanceDay && (
-            <button className="card insight-row" onClick={() => onOpenDay(ins.bestBalanceDay!.ts)}>
-              <span className="insight-emoji" aria-hidden>
-                ⚖️
-              </span>
-              <span className="insight-main">
-                <span className="insight-kicker">Best balance</span>
-                <span className="insight-title">
-                  {new Date(ins.bestBalanceDay.ts).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
-                </span>
-                <span className="insight-sub tnum">{Math.round(ins.bestBalanceDay.pct * 100)}% of your time was outside</span>
-              </span>
-              <ChevronRight size={20} className="faint" />
-            </button>
-          )}
+          <div className="grid-2">
+            {ins.bestWeek && (
+              <section className="card stat-tile">
+                <div className="stat-label">📅 Best week</div>
+                <div className="stat-value tnum">{fmtDur(ins.bestWeek.minutes)}</div>
+                <div className="stat-sub">w/c {new Date(ins.bestWeek.start).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</div>
+              </section>
+            )}
+            {ins.longest && (
+              <section className="card stat-tile">
+                <div className="stat-label">⏱️ Longest outing</div>
+                <div className="stat-value tnum">{fmtDur(ins.longest.minutes)}</div>
+                <div className="stat-sub">{findCategory(ins.longest.category)?.label ?? 'Outside'}</div>
+              </section>
+            )}
+          </div>
 
-          {(['outside', 'inside'] as Kind[]).map((k) => (
-            <CategoryCard key={k} kind={k} cats={ins.categories[k]} />
-          ))}
+          <CategoryCard cats={ins.categories} />
 
           {ins.topWeekday !== null && (
             <section className="card">
               <h2 className="card-title">Most outdoorsy day</h2>
               <p className="muted card-sub">
-                <b className="text-strong">{WEEKDAYS_LONG[ins.topWeekday]}s</b>, with {fmtDur(ins.weekday[ins.topWeekday].outside)} outside on average 🌞
+                <b className="text-strong">{WEEKDAYS_LONG[ins.topWeekday]}s</b>, with {fmtDur(ins.weekday[ins.topWeekday])} outside on average 🌞
               </p>
-              <WeekdayBars values={ins.weekday.map((w) => w.outside)} top={ins.topWeekday} />
+              <WeekdayBars values={ins.weekday} top={ins.topWeekday} />
             </section>
           )}
 
@@ -127,31 +133,45 @@ export function InsightsView({ entries, map, onOpenDay }: { entries: Entry[]; ma
               </div>
             </section>
           )}
+
+          <p className="about">🌳 {fmtDur(ins.totalMinutes)} outside in this period. Nice one!</p>
         </>
       )}
     </div>
   );
 }
 
-function CategoryCard({ kind, cats }: { kind: Kind; cats: CategoryStat[] }) {
+function VsBar({ emoji, label, value, max }: { emoji: string; label: string; value: number; max: number }) {
+  return (
+    <div className="hbar-row">
+      <span className="hbar-label">
+        <span aria-hidden>{emoji}</span> {label}
+      </span>
+      <span className="hbar-track">
+        <span className="hbar-fill" style={{ width: `${max ? Math.max(2, (value / max) * 100) : 0}%`, background: 'var(--outside)' }} />
+      </span>
+      <span className="hbar-val tnum">{fmtDur(value)}</span>
+    </div>
+  );
+}
+
+function CategoryCard({ cats }: { cats: CategoryStat[] }) {
   if (!cats.length) return null;
   const max = Math.max(...cats.map((c) => c.minutes));
   const total = cats.reduce((a, c) => a + c.minutes, 0);
   return (
-    <section className="card" aria-label={`Top ${kind} activities`}>
-      <h2 className="card-title">
-        Top {kind} activities {KIND_EMOJI[kind]}
-      </h2>
+    <section className="card" aria-label="Top activities">
+      <h2 className="card-title">Top activities 🏅</h2>
       <ul className="hbars">
-        {cats.slice(0, 5).map((c) => {
-          const cat = findCategory(kind, c.id);
+        {cats.slice(0, 6).map((c) => {
+          const cat = findCategory(c.id);
           return (
             <li key={c.id || 'none'} className="hbar-row">
               <span className="hbar-label">
-                <span aria-hidden>{cat?.emoji ?? '•'}</span> {cat?.label ?? `Other ${KIND_LABEL[kind].toLowerCase()}`}
+                <span aria-hidden>{cat?.emoji ?? '🌳'}</span> {cat?.label ?? 'Just outside'}
               </span>
               <span className="hbar-track">
-                <span className="hbar-fill" style={{ width: `${Math.max(2, (c.minutes / max) * 100)}%`, background: `var(--${kind})` }} />
+                <span className="hbar-fill" style={{ width: `${Math.max(2, (c.minutes / max) * 100)}%`, background: 'var(--outside)' }} />
               </span>
               <span className="hbar-val tnum">
                 {fmtDur(c.minutes)}

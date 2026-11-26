@@ -6,9 +6,8 @@ process.env.TZ = 'Europe/London';
 
 const at = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
 let n = 0;
-const entry = (kind: Entry['kind'], start: number, minutes: number, extra: Partial<Entry> = {}): Entry => ({
+const entry = (_kind: 'outside', start: number, minutes: number, extra: Partial<Entry> = {}): Entry => ({
   id: `e${n++}`,
-  kind,
   start,
   minutes,
   source: 'quick',
@@ -43,21 +42,20 @@ describe('splitByDay', () => {
 });
 
 describe('dailyTotals', () => {
-  it('sums per day and kind', () => {
+  it('sums outside minutes per day (split across midnight)', () => {
     const map = dailyTotals([
       entry('outside', at(2026, 11, 26, 9), 30),
       entry('outside', at(2026, 11, 26, 15), 45),
-      entry('inside', at(2026, 11, 26, 19), 90),
-      entry('inside', at(2026, 11, 25, 23, 45), 30),
+      entry('outside', at(2026, 11, 25, 23, 45), 30),
     ]);
-    expect(map.get('2026-11-26')).toEqual({ inside: 90 + 15, outside: 75 });
-    expect(map.get('2026-11-25')).toEqual({ inside: 15, outside: 0 });
+    expect(map.get('2026-11-26')).toBe(75 + 15);
+    expect(map.get('2026-11-25')).toBe(15);
   });
 });
 
 describe('entriesOnDay', () => {
   it('includes entries overlapping the day', () => {
-    const a = entry('inside', at(2026, 11, 25, 23, 30), 60);
+    const a = entry('outside', at(2026, 11, 25, 23, 30), 60);
     const b = entry('outside', at(2026, 11, 26, 10), 30);
     const c = entry('outside', at(2026, 11, 27, 0), 30);
     const day = at(2026, 11, 26);

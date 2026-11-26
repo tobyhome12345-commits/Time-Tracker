@@ -1,18 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Minus, Play, Plus, Trash2 } from 'lucide-react';
 import { Sheet } from '../components/Sheet';
-import { CATEGORIES, KIND_EMOJI, KIND_LABEL } from '../data/categories';
+import { CATEGORIES, OUTSIDE_EMOJI } from '../data/categories';
 import { addEntry, deleteEntry, getState, restoreEntry, startTimer, updateEntry } from '../data/store';
-import type { Entry, Kind } from '../data/types';
-import { fmtDur, fromInputs, MIN, sameDay, startOfDay, toDateInput, toTimeInput } from '../logic/time';
+import type { Entry } from '../data/types';
+import { dayKey, fmtDur, fromInputs, MIN, sameDay, toDateInput, toTimeInput } from '../logic/time';
 import { showToast } from '../components/toast';
 import { tap } from '../native/platform';
-import { afterLogSaved, afterTimerStarted } from '../native/notify';
 
 const PRESETS = [15, 30, 60, 120];
 
 export interface LogSheetProps {
-  kind: Kind;
   /** Editing an existing entry */
   entry?: Entry;
   /** Day currently shown on the Today screen (defaults "when" for past days) */
@@ -20,12 +18,11 @@ export interface LogSheetProps {
   onClose: () => void;
 }
 
-export function LogSheet({ kind: initialKind, entry, dayTs, onClose }: LogSheetProps) {
+export function LogSheet({ entry, dayTs, onClose }: LogSheetProps) {
   const editing = !!entry;
   const now = Date.now();
   const viewingPast = !sameDay(dayTs, now);
 
-  const [kind, setKind] = useState<Kind>(entry?.kind ?? initialKind);
   const [minutes, setMinutes] = useState<number>(entry?.minutes ?? 0);
   const [custom, setCustom] = useState<boolean>(!!entry && !PRESETS.includes(entry.minutes));
   const [category, setCategory] = useState<string | undefined>(entry?.category);
@@ -47,37 +44,21 @@ export function LogSheet({ kind: initialKind, entry, dayTs, onClose }: LogSheetP
 
   const start = when === 'now' ? now - minutes * MIN : fromInputs(date, time);
   const inFuture = when === 'earlier' && start + minutes * MIN > now + MIN;
+  const beforeTracking = dayKey(start) < getState().trackingSince;
   const canSave = minutes >= 1 && !inFuture;
   const timerRunning = !!getState().timer;
-
-  const color = kind === 'outside' ? 'var(--outside)' : 'var(--inside)';
-  const solid = kind === 'outside' ? 'var(--outside-solid)' : 'var(--inside-solid)';
-  const chipStyle = {
-    ['--chip-on' as string]: color,
-    ['--chip-on-bg' as string]: kind === 'outside' ? 'var(--outside-soft)' : 'var(--inside-soft)',
-  };
-
-  const pickKind = (k: Kind) => {
-    if (k === kind) return;
-    tap();
-    setKind(k);
-    setCategory(undefined);
-  };
 
   const save = () => {
     if (!canSave) return;
     tap();
     const n = note.trim() || undefined;
     if (entry) {
-      updateEntry(entry.id, { kind, minutes, start, category, note: n ?? '' });
+      updateEntry(entry.id, { minutes, start, category, note: n ?? '' });
       showToast({ msg: 'Changes saved ✓' });
     } else {
-      const e = addEntry({ kind, minutes, start, category, note: n, source: custom ? 'custom' : 'quick' });
-      afterLogSaved(e);
-      showToast({
-        msg: `Logged ${fmtDur(minutes)} ${kind}${sameDay(start, now) ? '' : ` on ${new Date(start).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}`} ${KIND_EMOJI[kind]}`,
-        action: { label: 'Undo', run: () => deleteEntry(e.id) },
-      });
+      const e = addEntry({ minutes, start, category, note: n, source: custom ? 'custom' : 'quick' });
+      const when = sameDay(start, now) ? '' : ` on ${new Date(start).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}`;
+      showToast({ msg: `Logged ${fmtDur(minutes)} outside${when} ${OUTSIDE_EMOJI}`, action: { label: 'Undo', run: () => deleteEntry(e.id) } });
     }
     onClose();
   };
@@ -92,9 +73,8 @@ export function LogSheet({ kind: initialKind, entry, dayTs, onClose }: LogSheetP
 
   const timerInstead = () => {
     tap();
-    startTimer(kind, category);
-    afterTimerStarted(kind);
-    showToast({ msg: `${KIND_LABEL[kind]} timer started ⏱️` });
+    startTimer(category);
+    showToast({ msg: 'Outside timer started ⏱️ Have fun!' });
     onClose();
   };
 
@@ -104,7 +84,7 @@ export function LogSheet({ kind: initialKind, entry, dayTs, onClose }: LogSheetP
 
   return (
     <Sheet
-      title={editing ? 'Edit log' : 'Log time'}
+      title={editing ? 'Edit outdoor time' : `Log outside ${OUTSIDE_EMOJI}`}
       onClose={onClose}
       footer={
         <>
@@ -117,31 +97,16 @@ export function LogSheet({ kind: initialKind, entry, dayTs, onClose }: LogSheetP
               <Play size={18} /> Timer
             </button>
           )}
-          <button className="btn btn-primary btn-block log-save" style={{ background: solid, color: '#fff' }} onClick={save} disabled={!canSave}>
-            {editing ? 'Save changes' : minutes ? `Log ${fmtDur(minutes)} ${kind}` : 'Pick a time'}
+          <button className="btn btn-block log-save" onClick={save} disabled={!canSave}>
+            {editing ? 'Save changes' : minutes ? `Log ${fmtDur(minutes)}` : 'Pick a time'}
           </button>
         </>
       }
     >
-      <div className="kind-toggle" role="radiogroup" aria-label="Inside or outside">
-        {(['inside', 'outside'] as Kind[]).map((k) => (
-          <button
-            key={k}
-            role="radio"
-            aria-checked={kind === k}
-            className={`kind-opt kind-${k}`}
-            onClick={() => pickKind(k)}
-          >
-            <span aria-hidden className="kind-emoji">
-              {KIND_EMOJI[k]}
-            </span>
-            {KIND_LABEL[k]}
-          </button>
-        ))}
-      </div>
-
-      <span className="field-label">How long?</span>
-      <div className="chips" style={chipStyle}>
+      <span className="field-label" style={{ marginTop: 4 }}>
+        How long were you outside?
+      </span>
+      <div className="chips">
         {PRESETS.map((p) => (
           <button
             key={p}
@@ -170,15 +135,17 @@ export function LogSheet({ kind: initialKind, entry, dayTs, onClose }: LogSheetP
       </div>
 
       {custom && (
-        <div className="hm-picker" style={chipStyle}>
+        <div className="hm-picker">
           <Stepper label="hours" display={`${h}`} unit="h" onDec={() => bump(-60)} onInc={() => bump(60)} decDisabled={minutes < 60} />
           <Stepper label="minutes" display={String(m).padStart(2, '0')} unit="m" onDec={() => bump(-5)} onInc={() => bump(5)} decDisabled={minutes <= 5} />
         </div>
       )}
 
-      <span className="field-label">What were you up to? <span className="faint">(optional)</span></span>
-      <div className="chips" style={chipStyle}>
-        {CATEGORIES[kind].map((c) => (
+      <span className="field-label">
+        What did you do? <span className="faint">(optional)</span>
+      </span>
+      <div className="chips">
+        {CATEGORIES.map((c) => (
           <button
             key={c.id}
             className="chip"
@@ -201,7 +168,7 @@ export function LogSheet({ kind: initialKind, entry, dayTs, onClose }: LogSheetP
         className="input"
         rows={2}
         maxLength={280}
-        placeholder={kind === 'outside' ? 'e.g. Skatepark with Sam' : 'e.g. Finished level 12'}
+        placeholder="e.g. Skatepark with Sam"
         value={note}
         onChange={(e) => setNote(e.target.value)}
         onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300)}
@@ -243,21 +210,17 @@ export function LogSheet({ kind: initialKind, entry, dayTs, onClose }: LogSheetP
         </div>
       )}
       {inFuture && <p className="form-error">That ends in the future. Pick an earlier time ⏪</p>}
-      {when === 'earlier' && !inFuture && !sameDay(start, startOfDay(now)) && minutes > 0 && (
-        <p className="when-hint muted">Counts toward {new Date(start).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}</p>
+      {when === 'earlier' && !inFuture && !sameDay(start, now) && minutes > 0 && (
+        <p className="when-hint muted">
+          Counts toward {new Date(start).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
+          {beforeTracking ? ' (before XP tracking started, so it counts for stats and badges, not XP)' : ''}
+        </p>
       )}
     </Sheet>
   );
 }
 
-function Stepper(props: {
-  label: string;
-  display: string;
-  unit: string;
-  onDec: () => unknown;
-  onInc: () => unknown;
-  decDisabled?: boolean;
-}) {
+function Stepper(props: { label: string; display: string; unit: string; onDec: () => unknown; onInc: () => unknown; decDisabled?: boolean }) {
   return (
     <div className="stepper" role="group" aria-label={props.label}>
       <button

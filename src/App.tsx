@@ -8,7 +8,6 @@ import { STAGES } from './logic/progress';
 import { showToast } from './components/toast';
 import { celebrate } from './native/platform';
 import { PipScreen } from './screens/PipScreen';
-import { onNotificationTap, resyncAll } from './native/notify';
 import { SettingsScreen } from './screens/Settings';
 import { applyTheme, onSystemThemeChange } from './theme';
 import { TodayScreen } from './screens/Today';
@@ -33,38 +32,37 @@ export function App() {
     return onSystemThemeChange(() => applyTheme({ theme, accent }));
   }, [theme, accent]);
 
-  // Celebrate new badges and level-ups.
-  const { progress } = useDerived();
-  const prevLevel = useRef<number | null>(null);
+  // Celebrate: target hit, level up/down (Pip evolving/shrinking), challenge wins, new badges.
+  const { ledger, wins, badges } = useDerived();
+  const prev = useRef<{ level: number; hit: boolean; day: string; wins: number } | null>(null);
   useEffect(() => {
     if (!isLoaded()) return;
-    const lvl = progress.level.level;
+    const lvl = ledger.level.level;
+    const cur = { level: lvl, hit: ledger.today.hit, day: ledger.today.info.key, wins: wins.length };
     const msgs: string[] = [];
-    if (prevLevel.current !== null && lvl > prevLevel.current) {
-      const evolved = STAGES.find((s) => s.from === lvl && s.from > 1);
-      msgs.push(evolved ? `🌟 Pip evolved into a ${evolved.name}!` : `🌱 Pip reached level ${lvl}!`);
+    const p = prev.current;
+    if (p && p.day === cur.day) {
+      if (!p.hit && cur.hit) msgs.push(`🎯 Target hit! +${ledger.today.xp} XP`);
+      if (cur.wins > p.wins) msgs.push('🏆 Weekend challenge complete! +50 XP');
     }
-    prevLevel.current = lvl;
-    const fresh = progress.badgeResults.filter((b) => b.earned && !data.badges[b.def.id]);
+    if (p && lvl > p.level) {
+      const evolved = STAGES.find((s) => s.from === lvl && s.from > 1);
+      msgs.push(evolved ? `🌟 Pip evolved into a ${evolved.name}!` : `🌱 Level up! Pip is now level ${lvl}`);
+    } else if (p && lvl < p.level) {
+      msgs.push(`🥺 Pip dropped to level ${lvl}. Win it back outside!`);
+    }
+    prev.current = cur;
+    const fresh = badges.filter((b) => b.earned && !data.badges[b.def.id]);
     if (fresh.length) {
       unlockBadges(fresh.map((b) => b.def.id));
       msgs.push(fresh.length === 1 ? `🏅 Badge unlocked: ${fresh[0].def.name}` : `🏅 ${fresh.length} new badges unlocked!`);
     }
     if (msgs.length) {
-      celebrate();
-      showToast({ msg: msgs.join('  ·  '), ms: 4000, action: { label: 'See', run: () => setTab('pip') } }, { queued: true });
+      if (!msgs[0].startsWith('🥺')) celebrate();
+      showToast({ msg: msgs.join('  ·  '), ms: 4500, action: { label: 'See', run: () => setTab('pip') } }, { queued: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [progress]);
-
-  // Notifications: re-sync on launch, open Today when one is tapped.
-  useEffect(() => {
-    void resyncAll();
-    return onNotificationTap(() => {
-      setDayTs(startOfDay(Date.now()));
-      setTab('today');
-    });
-  }, []);
+  }, [ledger]);
 
   // Save immediately when the app goes to the background.
   useEffect(() => {
@@ -87,7 +85,6 @@ export function App() {
     });
     const pause = CapApp.addListener('pause', () => void flush());
     const resume = CapApp.addListener('resume', () => {
-      void resyncAll();
       const prevToday = todayRef.current;
       setDayTs((d) => (d === prevToday ? startOfDay(Date.now()) : d));
     });
