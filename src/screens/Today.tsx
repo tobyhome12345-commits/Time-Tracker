@@ -5,25 +5,28 @@ import type { Entry, Kind } from '../data/types';
 import { findCategory, KIND_EMOJI, KIND_LABEL } from '../data/categories';
 import { Ring } from '../components/Ring';
 import { GoalBar } from '../components/Progress';
-import { addDays, dailyTotals, dayKey, entriesOnDay, fmtDayLong, fmtDur, fmtTime, MIN, relativeDayName, startOfDay, totalsFor } from '../logic/time';
+import { addDays, dayKey, entriesOnDay, fmtDayLong, fmtDur, fmtTime, MIN, relativeDayName, startOfDay, totalsFor } from '../logic/time';
 import { LogSheet } from './LogSheet';
 import { TimerCard } from './TimerCard';
 import { tap } from '../native/platform';
+import { useDerived } from '../logic/useProgress';
+import { PipCard } from './PipCard';
 
 interface Props {
   dayTs: number;
   setDayTs: (ts: number) => void;
-  hero?: React.ReactNode;
+  onOpenPip: () => void;
 }
 
-export function TodayScreen({ dayTs, setDayTs, hero }: Props) {
+export function TodayScreen({ dayTs, setDayTs, onOpenPip }: Props) {
   const data = useAppData();
   const { settings } = data;
   const [sheet, setSheet] = useState<{ kind: Kind; entry?: Entry } | null>(null);
   const today = startOfDay(Date.now());
   const isToday = dayTs === today;
 
-  const totals = useMemo(() => totalsFor(dailyTotals(data.entries), dayKey(dayTs)), [data.entries, dayTs]);
+  const { map, progress } = useDerived();
+  const totals = totalsFor(map, dayKey(dayTs));
   const list = useMemo(() => entriesOnDay(data.entries, dayTs).slice().reverse(), [data.entries, dayTs]);
 
   const diff = totals.outside - totals.inside;
@@ -62,6 +65,7 @@ export function TodayScreen({ dayTs, setDayTs, hero }: Props) {
 
       <div className="stack">
         {isToday && data.timer && <TimerCard onEdit={(e) => setSheet({ kind: e.kind, entry: e })} />}
+        <PipCard totals={totals} settings={settings} stage={progress.level.stage} level={progress.level.level} isToday={isToday} onOpen={onOpenPip} />
         <section className="card hero-card" aria-label="Inside vs outside">
           <div className="hero-ring">
             <Ring outside={totals.outside} inside={totals.inside} />
@@ -83,7 +87,6 @@ export function TodayScreen({ dayTs, setDayTs, hero }: Props) {
             </div>
           </div>
           <p className="hero-verdict">{verdict}</p>
-          {hero}
         </section>
 
         <section className="card goals-card" aria-label="Goals">

@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { TabBar, type TabId } from './components/TabBar';
 import { Toaster } from './components/toast';
-import { flush, useAppData } from './data/store';
+import { flush, isLoaded, unlockBadges, useAppData } from './data/store';
+import { useDerived } from './logic/useProgress';
+import { STAGES } from './logic/progress';
+import { showToast } from './components/toast';
+import { celebrate } from './native/platform';
+import { PipScreen } from './screens/PipScreen';
 import { applyTheme, onSystemThemeChange } from './theme';
 import { TodayScreen } from './screens/Today';
 import { TimerPill } from './screens/TimerCard';
@@ -25,6 +30,30 @@ export function App() {
     if (theme !== 'system') return;
     return onSystemThemeChange(() => applyTheme({ theme, accent }));
   }, [theme, accent]);
+
+  // Celebrate new badges and level-ups.
+  const { progress } = useDerived();
+  const prevLevel = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isLoaded()) return;
+    const lvl = progress.level.level;
+    const msgs: string[] = [];
+    if (prevLevel.current !== null && lvl > prevLevel.current) {
+      const evolved = STAGES.find((s) => s.from === lvl && s.from > 1);
+      msgs.push(evolved ? `🌟 Pip evolved into a ${evolved.name}!` : `🌱 Pip reached level ${lvl}!`);
+    }
+    prevLevel.current = lvl;
+    const fresh = progress.badgeResults.filter((b) => b.earned && !data.badges[b.def.id]);
+    if (fresh.length) {
+      unlockBadges(fresh.map((b) => b.def.id));
+      msgs.push(fresh.length === 1 ? `🏅 Badge unlocked: ${fresh[0].def.name}` : `🏅 ${fresh.length} new badges unlocked!`);
+    }
+    if (msgs.length) {
+      celebrate();
+      showToast({ msg: msgs.join('  ·  '), ms: 4000, action: { label: 'See', run: () => setTab('pip') } }, { queued: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress]);
 
   // Save immediately when the app goes to the background.
   useEffect(() => {
@@ -59,7 +88,8 @@ export function App() {
 
   return (
     <div className="app">
-      {tab === 'today' && <TodayScreen dayTs={dayTs} setDayTs={setDayTs} />}
+      {tab === 'today' && <TodayScreen dayTs={dayTs} setDayTs={setDayTs} onOpenPip={() => setTab('pip')} />}
+      {tab === 'pip' && <PipScreen />}
       {tab === 'stats' && (
         <StatsScreen
           onOpenDay={(ts) => {
@@ -68,7 +98,7 @@ export function App() {
           }}
         />
       )}
-      {(tab === 'pip' || tab === 'settings') && (
+      {tab === 'settings' && (
         <main className="screen">
           <div className="screen-head">
             <h1 className="screen-title">{tab[0].toUpperCase() + tab.slice(1)}</h1>

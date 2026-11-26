@@ -8,18 +8,25 @@ export interface ToastData {
 }
 
 let current: ToastData | null = null;
+const queue: ToastData[] = [];
 let seq = 0;
 const ls = new Set<() => void>();
 const emit = () => ls.forEach((l) => l());
 
-export function showToast(t: Omit<ToastData, 'id'>) {
-  current = { ...t, id: ++seq };
+/** Show a toast now. With `queued`, wait until the current toast is gone (used for celebrations). */
+export function showToast(t: Omit<ToastData, 'id'>, opts: { queued?: boolean } = {}) {
+  const next = { ...t, id: ++seq };
+  if (opts.queued && current) {
+    queue.push(next);
+    return;
+  }
+  current = next;
   emit();
 }
 
 export function hideToast(id?: number) {
   if (id !== undefined && current?.id !== id) return;
-  current = null;
+  current = queue.shift() ?? null;
   emit();
 }
 
