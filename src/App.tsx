@@ -6,6 +6,7 @@ import { flush, useAppData } from './data/store';
 import { applyTheme, onSystemThemeChange } from './theme';
 import { TodayScreen } from './screens/Today';
 import { TimerPill } from './screens/TimerCard';
+import { StatsScreen } from './screens/Stats';
 import { runBack } from './native/back';
 import { isNative } from './native/platform';
 import { startOfDay } from './logic/time';
@@ -59,7 +60,15 @@ export function App() {
   return (
     <div className="app">
       {tab === 'today' && <TodayScreen dayTs={dayTs} setDayTs={setDayTs} />}
-      {tab !== 'today' && (
+      {tab === 'stats' && (
+        <StatsScreen
+          onOpenDay={(ts) => {
+            setDayTs(startOfDay(ts));
+            setTab('today');
+          }}
+        />
+      )}
+      {(tab === 'pip' || tab === 'settings') && (
         <main className="screen">
           <div className="screen-head">
             <h1 className="screen-title">{tab[0].toUpperCase() + tab.slice(1)}</h1>
