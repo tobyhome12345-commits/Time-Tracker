@@ -124,7 +124,7 @@ export function XpRulesSheet({ onClose }: { onClose: () => void }) {
         </ul>
         <h3>😴 Rest days</h3>
         <ul>
-          <li>Ill or stuck inside? Use one rest day per week: no XP lost, streak safe.</li>
+          <li>Ill or really busy? Use up to 2 rest days per week: no XP lost, streak safe.</li>
         </ul>
         <p className="settings-note">
           Example: {fmtDur(t.weekday + 30)} on a school day with a 3-day streak = 25 + 30 + 15 = +70 XP 🎉

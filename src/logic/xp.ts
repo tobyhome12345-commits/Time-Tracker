@@ -63,6 +63,14 @@ export function dayInfo(ctx: DayCtx, key: string): DayInfo {
   };
 }
 
+/** How many rest/sick days you can use per Mon–Sun week. */
+export const REST_DAYS_PER_WEEK = 2;
+
+/** Rest days still available in the Mon–Sun week containing `key` (not counting `key` itself). */
+export function restDaysLeft(restDays: string[], key: string): number {
+  return Math.max(0, REST_DAYS_PER_WEEK - restDaysUsedInWeek(restDays, key).length);
+}
+
 /** Rest days already used in the Mon–Sun week containing `key` (excluding `key` itself). */
 export function restDaysUsedInWeek(restDays: string[], key: string): string[] {
   const wk = startOfWeek(keyToTs(key));

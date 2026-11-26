@@ -7,7 +7,7 @@ import { Ring } from '../components/Ring';
 import { Sheet } from '../components/Sheet';
 import { showToast } from '../components/toast';
 import { addDays, dayKey, entriesOnDay, fmtDayLong, fmtDur, fmtTime, MIN, relativeDayName, startOfDay } from '../logic/time';
-import { DAY_TYPE_EMOJI, DAY_TYPE_LABEL, dayInfo, restDaysUsedInWeek, type DayInfo, type LedgerRow } from '../logic/xp';
+import { DAY_TYPE_EMOJI, DAY_TYPE_LABEL, dayInfo, REST_DAYS_PER_WEEK, restDaysLeft, type DayInfo, type LedgerRow } from '../logic/xp';
 import { useDerived } from '../logic/useProgress';
 import { LogSheet } from './LogSheet';
 import { TimerCard, useNow } from './TimerCard';
@@ -39,7 +39,8 @@ export function TodayScreen({ dayTs, setDayTs, onOpenPip }: Props) {
   const minutes = saved + timerMins;
 
   const list = useMemo(() => entriesOnDay(data.entries, dayTs).slice().reverse(), [data.entries, dayTs]);
-  const restUsed = restDaysUsedInWeek(data.restDays, key).length > 0;
+  const restLeft = restDaysLeft(data.restDays, key);
+  const restUsed = restLeft === 0;
   const canRest = !!row && !info.rest && !row.hit && !restUsed;
 
   const go = (n: number) => {
@@ -126,19 +127,21 @@ export function TodayScreen({ dayTs, setDayTs, onOpenPip }: Props) {
               } else setRestSheet(true);
             }}
           >
-            {info.rest ? '😴 This is a rest day. Tap to undo' : `🤒 Feeling ill or stuck inside? Use your rest day (1 left this week)`}
+            {info.rest ? '😴 This is a rest day. Tap to undo' : `🤒 Feeling ill or really busy? Use a rest day (${restLeft} left this week)`}
           </button>
         )}
-        {row && !info.rest && !row.hit && restUsed && <p className="rest-note">Rest day already used this week.</p>}
+        {row && !info.rest && !row.hit && restUsed && <p className="rest-note">Both rest days used this week.</p>}
       </div>
 
       {sheet && <LogSheet entry={sheet.entry} dayTs={dayTs} onClose={() => setSheet(null)} />}
       {restSheet && (
-        <Sheet title="Use your rest day?" onClose={() => setRestSheet(false)}>
+        <Sheet title="Use a rest day?" onClose={() => setRestSheet(false)}>
           <p className="import-summary">
             Make <b>{relativeDayName(dayTs).toLowerCase() === 'today' ? 'today' : fmtDayLong(dayTs)}</b> a rest day: you won’t lose any XP and your streak stays safe 💤
           </p>
-          <p className="settings-note">You get one rest day per week (Monday to Sunday). Use it when you’re ill or really can’t get outside.</p>
+          <p className="settings-note">
+            You get {REST_DAYS_PER_WEEK} rest days per week (Monday to Sunday), and you have {restLeft} left this week. Use them when you’re ill or really busy.
+          </p>
           <div className="stack" style={{ gap: 10, marginTop: 16 }}>
             <button
               className="btn btn-primary btn-block"

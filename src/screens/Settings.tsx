@@ -114,7 +114,7 @@ export function SettingsScreen() {
 
         <h2 className="section-title">Rest days</h2>
         <section className="card settings-card">
-          <Row icon="😴" title="One rest day per week" sub="Ill or stuck inside? Use it from the Today screen: no XP lost, streak safe.">
+          <Row icon="😴" title="Two rest days per week" sub="Ill or really busy? Use one from the bottom of the Today screen: no XP lost, streak safe.">
             <span />
           </Row>
         </section>

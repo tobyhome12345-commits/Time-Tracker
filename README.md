@@ -42,7 +42,7 @@ Every change pushed to this repo builds a new version automatically. To update, 
 | Streak bonus | **+5 per streak day** (max +25) |
 | Weekend challenge complete | **+50** |
 | Miss your target | **−1 per minute short** (applied at midnight) |
-| 😴 Rest day (1 per week) | ±0, streak safe |
+| 😴 Rest day (2 per week) | ±0, streak safe |
 
 XP never goes below 0. Levels (and Pip's stage, Seed → Mighty Tree 😎) go **up and down**.
 

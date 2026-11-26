@@ -65,3 +65,17 @@ describe('importData', () => {
     expect(getState().targetHistory[0].weekday).toBe(45);
   });
 });
+
+describe('setRestDay', () => {
+  it('allows two rest days per week, not three', async () => {
+    const { setRestDay } = await import('../src/data/store');
+    setState(() => emptyData('2026-11-23'));
+    expect(setRestDay('2026-11-23', true)).toBe(true);
+    expect(setRestDay('2026-11-24', true)).toBe(true);
+    expect(setRestDay('2026-11-25', true)).toBe(false);
+    expect(getState().restDays).toEqual(['2026-11-23', '2026-11-24']);
+    expect(setRestDay('2026-11-30', true)).toBe(true); // next week
+    setRestDay('2026-11-24', false);
+    expect(setRestDay('2026-11-25', true)).toBe(true);
+  });
+});

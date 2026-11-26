@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildLedger, dayInfo, restDaysUsedInWeek, targetsOn, XP } from '../src/logic/xp';
+import { buildLedger, dayInfo, REST_DAYS_PER_WEEK, restDaysLeft, restDaysUsedInWeek, targetsOn, XP } from '../src/logic/xp';
 import { levelInfo, stageFor, xpForLevel } from '../src/logic/levels';
 import { dailyTotals } from '../src/logic/time';
 import { emptyData, type AppData, type Entry } from '../src/data/types';
@@ -121,7 +121,16 @@ describe('XP ledger', () => {
 });
 
 describe('rest day limit', () => {
-  it('one per Mon–Sun week', () => {
+  it('two per Mon–Sun week', () => {
+    expect(REST_DAYS_PER_WEEK).toBe(2);
+    expect(restDaysLeft([], '2026-11-26')).toBe(2);
+    expect(restDaysLeft(['2026-11-24'], '2026-11-26')).toBe(1);
+    expect(restDaysLeft(['2026-11-24', '2026-11-25'], '2026-11-26')).toBe(0);
+    expect(restDaysLeft(['2026-11-24', '2026-11-25'], '2026-11-25')).toBe(1); // undoing one of them is fine
+    expect(restDaysLeft(['2026-11-21', '2026-11-22'], '2026-11-26')).toBe(2); // last week's don't count
+  });
+
+  it('lists the week’s used rest days', () => {
     expect(restDaysUsedInWeek(['2026-11-24'], '2026-11-27')).toEqual(['2026-11-24']);
     expect(restDaysUsedInWeek(['2026-11-24'], '2026-11-24')).toEqual([]);
     expect(restDaysUsedInWeek(['2026-11-22'], '2026-11-24')).toEqual([]); // previous week (Sunday)

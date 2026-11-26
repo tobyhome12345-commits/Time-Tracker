@@ -4,7 +4,7 @@ import { emptyData } from './types';
 import type { AppData, Entry, Holiday, RunningTimer, Settings, Targets } from './types';
 import { normalizeData } from './migrate';
 import { dayKey } from '../logic/time';
-import { restDaysUsedInWeek } from '../logic/xp';
+import { restDaysLeft } from '../logic/xp';
 
 /* A tiny global store: one AppData object, persisted as a single JSON blob on the device
    (Android SharedPreferences via @capacitor/preferences; localStorage in a browser). */
@@ -200,9 +200,9 @@ export function deleteHoliday(id: string): Holiday | undefined {
   return h;
 }
 
-/** Mark/unmark a rest day. Max one per Mon–Sun week: returns false if the week's rest day is used. */
+/** Mark/unmark a rest day. Max REST_DAYS_PER_WEEK per Mon–Sun week: returns false if they're all used. */
 export function setRestDay(key: string, on: boolean): boolean {
-  if (on && restDaysUsedInWeek(state.restDays, key).length) return false;
+  if (on && restDaysLeft(state.restDays, key) === 0) return false;
   setState((s) => {
     const set = new Set(s.restDays);
     if (on) set.add(key);
