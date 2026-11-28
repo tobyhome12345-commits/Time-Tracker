@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Touch Grass launcher icon (source of truth). 108x108 Android adaptive-icon grid:
+     solid app green + a white sprout inside the 66dp safe zone. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+  <rect width="108" height="108" fill="#16A34A"/>
+  <g fill="#FFFFFF" transform="translate(54 54) scale(0.9) translate(-56.5 -53)">
+    <path d="M50.5,54 L50.5,73.5 A3.5,3.5 0 0,0 57.5,73.5 L57.5,54 A3.5,3.5 0 0,0 50.5,54 Z"/>
+    <path d="M55,53 C68.6,56.4 80.2,45.9 78,32 C64.4,28.6 52.9,39.1 55,53 Z"/>
+    <path d="M53,58 C53.7,46.3 43.7,39.3 33,44 C32.3,55.7 42.3,62.7 53,58 Z"/>
+  </g>
+</svg>

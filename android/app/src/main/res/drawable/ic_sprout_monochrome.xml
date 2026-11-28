@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Touch Grass launcher icon monochrome layer: minimalist sprout (same shape as resources/icon.svg). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- scale 0.9 around the sprout's centre (56.5, 53), then move it to the icon centre (54, 54) -->
+    <group
+        android:pivotX="56.5"
+        android:pivotY="53"
+        android:scaleX="0.9"
+        android:scaleY="0.9"
+        android:translateX="-2.5"
+        android:translateY="1">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M50.5,54 L50.5,73.5 A3.5,3.5 0 0,0 57.5,73.5 L57.5,54 A3.5,3.5 0 0,0 50.5,54 Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M55,53 C68.6,56.4 80.2,45.9 78,32 C64.4,28.6 52.9,39.1 55,53 Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M53,58 C53.7,46.3 43.7,39.3 33,44 C32.3,55.7 42.3,62.7 53,58 Z" />
+    </group>
+</vector>
